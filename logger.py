@@ -30,10 +30,10 @@ pins = [
     { 'pin' : 'xbee.gond_batt', 'tag': 'pen_batt' },
     { 'pin' : 'xbee.gond_rx_count', 'tag': 'pen_rxcount' },
     { 'pin' : 'xbee.gond_err_count', 'tag': 'pen_errcount' },
+    { 'pin' : 'xbee.gond_flags', 'tag': 'pen_flags' },
+    { 'pin' : 'xbee.gond_touch', 'tag': 'pen_touch' },
     { 'pin' : 'xbee.cksum-err', 'tag': 'xbee_cksumerr' },
     { 'pin' : 'xbee.rx-err', 'tag': 'xbee_rxerr' },
-    { 'pin' : 'xbee.gond_touch', 'tag': 'pen_touch' },
-    { 'pin' : 'xbee.flags', 'tag': 'pen_flags' },
 
     ]
 
@@ -41,6 +41,7 @@ pins = [
 for pin in pins:
     p = Popen('halcmd getp %s' % pin['pin'], shell=True, stdout=PIPE, stderr=PIPE)
     stdout, err = p.communicate()
+    log.debug("getting hal %s" % pin['pin'])
     log.debug("error code = %d" % p.returncode)
     log.debug("stderr = %s" % err)
     log.debug("stdout = %s" % stdout)

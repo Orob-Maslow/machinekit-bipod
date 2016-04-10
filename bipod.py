@@ -9,7 +9,7 @@ import time
 import pickle
 
 # gondola flags
-GOND_FLAG_TOUCH = 1
+GOND_FLAG_CHARGE = 1
 
 # count how many programs have been run
 program_count = 0
@@ -32,10 +32,10 @@ log.addHandler(fh)
 log.info("started")
 
 # this should come from .hal
-width = 2370 
-g54 = { 'x': width/2, 'y': 600 } # this is where the g54 0,0 point will be
-pre_charge_pos = { 'x' : 30, 'y' : 0, 'z': 8, 'f' : 7000 } # relative to g54
-charge_pos = { 'x' : 30, 'y' : -211, 'z': 8, 'f' : 2000 } # relative to g54
+width = 2160 
+g54 = { 'x': width/2, 'y': 580, 'z': 0 } # this is where the g54 0,0 point will be
+precharge_pos = { 'x' : 0, 'y' : -120, 'z': 8, 'f' : 7000 } # relative to g54
+charge_pos = { 'x' : 0, 'y' : -240, 'z': 8, 'f' : 2000 } # relative to g54
 
 # lengthen strings if necessary
 """
@@ -76,6 +76,9 @@ def run_program(file):
 
 def move_to_precharge():
     log.info("moving to precharge")
+
+    log.info("turning off charger")
+    os.system("config-pin p9.13 lo")
     log.debug("changing to auto mode")
     com.mode(linuxcnc.MODE_MDI)
     com.wait_complete() # wait until mode switch executed
@@ -83,8 +86,8 @@ def move_to_precharge():
     if sta.task_mode == linuxcnc.MODE_MDI:
         log.debug("success")
 
-    log.info("sending gcode x%d y%d" % (pre_charge_pos['x'], pre_charge_pos['y']))
-    com.mdi("g1 x%d y%d f%d" % (pre_charge_pos['x'], pre_charge_pos['y'], pre_charge_pos['f']))
+    log.info("sending gcode x%d y%d" % (precharge_pos['x'], precharge_pos['y']))
+    com.mdi("g1 x%d y%d f%d" % (precharge_pos['x'], precharge_pos['y'], precharge_pos['f']))
 
     wait_till_done()
 
@@ -101,6 +104,23 @@ def move_to_charge():
     com.mdi("g1 x%d y%d f%d" % (charge_pos['x'], charge_pos['y'], charge_pos['f']))
     wait_till_done()
 
+    # turn on power
+    log.info("turning on charger")
+    os.system("config-pin p9.13 hi")
+
+    # wait for charge connection
+    time.sleep(2)
+    # then check if it's charging
+    gond_flags = Popen('halcmd getp xbee.gond_flags', shell=True, stdout=PIPE).stdout.read().strip()
+    gond_flags = int(gond_flags)
+    if gond_flags & GOND_FLAG_CHARGE:
+        log.info("docked and charging")
+    else:
+        log.warning("docked but not charging")
+        log.warning("turning off charger")
+        os.system("config-pin p9.13 lo")
+
+
 def gondola_touched():
     gond_touch = Popen('halcmd getp xbee.gond_touch', shell=True, stdout=PIPE).stdout.read().strip()
     if gond_touch is not None:
@@ -108,8 +128,6 @@ def gondola_touched():
             gond_touch = int(gond_touch)
             if gond_touch >= 4:
                 log.warning("gondola touch = %d" % gond_touch)
-   #         gond_flags = int(gond_flags)
-   #         if gond_flags & GOND_FLAG_TOUCH:
         
                 return True
         except ValueError:
@@ -160,7 +178,7 @@ def wait_till_done():
             #1 to 6: INTERP_OK, INTERP_EXIT, INTERP_EXECUTE_FINISH, INTERP_ENDFILE, INTERP_FILE_NOT_OPEN, INTERP_ERROR 
             # always 0 so far
             log.debug("interp errcode %d" % sta.interpreter_errcode)
-            log.debug("line in file %d" % sta.read_line)
+            log.debug("line in file %d" % sta.motion_line)
 
         time.sleep(0.1)
         if sta.interp_state == linuxcnc.INTERP_IDLE:
@@ -189,28 +207,29 @@ while not sta.homed[0:3] == (1,1,1):
 
 ##############################
 
+def set_g54():
+    log.info("changing to mdi mode")
+    com.mode(linuxcnc.MODE_MDI)
+    com.wait_complete() # wait until mode switch executed
+    sta.poll()
+    if sta.task_mode == linuxcnc.MODE_MDI:
+        log.debug("success")
+
+    log.info("resetting g54 to x%d y%d z%d" % (g54['x'], g54['y'], g54['z']))
+    com.mdi("g10 l2 p1 x%d y%d" % (g54['x'], g54['y']))
+    com.feedrate(200)
+
+###############################
+
 log.info("teleop mode")
 com.teleop_enable(1)
 com.wait_complete()
 # doesn't seem to be a way to check if this worked
-
-###############################
-
-log.info("changing to mdi mode")
-com.mode(linuxcnc.MODE_MDI)
-com.wait_complete() # wait until mode switch executed
-sta.poll()
-if sta.task_mode == linuxcnc.MODE_MDI:
-    log.debug("success")
-
-log.info("resetting g54 to x%d y%d" % (g54['x'], g54['y']))
-com.mdi("g10 l2 p1 x%d y%d" % (g54['x'], g54['y']))
-com.feedrate(200)
+set_g54()
 move_to_precharge()
 move_to_charge()
 
 ###############################
-
 
 dir = '/tmp/gcodes/*ngc'
 while True:
@@ -220,6 +239,7 @@ while True:
         time.sleep(10)
         continue
 
+    set_g54() # in case the program changed it
     move_to_precharge()
     run_program(files[0])
     program_count += 1
