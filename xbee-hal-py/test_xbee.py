@@ -26,7 +26,7 @@ def communicate(amount, flags):
 
     bin = struct.pack('<BB', amount, flags)
     bin = struct.pack('<BBB',amount, flags, crc8_func(bin))
-    logging.info("sending %d [%02x/%02x]", amount, flags, crc8_func(bin))
+    logging.info("sending %d %d [%02x]", amount, flags, crc8_func(bin))
     serial_port.write(bin)
 
     packet_size = struct.calcsize(FMT)
@@ -47,7 +47,7 @@ def communicate(amount, flags):
 
 try:
     flags = GOND_FLAG_SERVO_ENABLE
-    for val in range(180):
+    for val in range(10,160):
         communicate(val, flags)
         """
         communicate(113)
