@@ -183,6 +183,10 @@ setp bb_gpio.p8.out-26.invert 1
 net estop-loop bb_gpio.p8.in-17 => iocontrol.0.emc-enable-in
 #setp bb_gpio.p8.in-17.invert 1
 
+# Axis enable signal (active low)
+net emcmot.00.enable => bb_gpio.p9.out-14
+setp bb_gpio.p9.out-14.invert 1
+
 # ################
 # Limit Switches
 # ################
