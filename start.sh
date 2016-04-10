@@ -1,5 +1,5 @@
 #!/bin/bash
-export PATH=$PATH:/home/machinekit/bipod/xbee-hal-py/
+export PATH=$PATH:/home/machinekit/bipod/xbee-hal-py/:/usr/local/bin/
 export HOME=/home/machinekit/
 export USER=machinekit
 cd $HOME
