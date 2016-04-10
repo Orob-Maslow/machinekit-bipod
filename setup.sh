@@ -87,6 +87,8 @@ sudo $(which config-pin) -f - <<- EOF
     P9.42 pwm   # 7 segment
 EOF
 
+# interrupt on p9.12 button press
+sudo -A su -c "echo rising > /sys/class/gpio/gpio60/edge"
 
 if [ ! -r /sys/class/uio/uio0 ] ; then
 	echo PRU control files not found in /sys/class/uio/uio0 >&2
