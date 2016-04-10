@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from subprocess import Popen, PIPE
-import Adafruit_BBIO.GPIO as GPIO
+from interrupt import Interrupt
 import os
 import glob
 import logging
@@ -40,10 +40,6 @@ log.addHandler(ch)
 fh = logging.FileHandler('bipod.log')
 fh.setFormatter(log_format)
 log.addHandler(fh)
-
-# setup button
-button_pin = "P9_12"
-GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 # this should come from .hal
 width = 2140 
@@ -205,14 +201,21 @@ def wait_till_done():
             log.info("finished")
             break
 
-        if GPIO.event_detected(button_pin):
+        # button pressed? shutdown
+        if not button_int.isAlive():
             raise ShutdownException()
 
 ###########################################################################
 # wait for button
+button_int = Interrupt()
+button_int.start()
 log.info("started - waiting for button")
-GPIO.wait_for_edge(button_pin, GPIO.RISING)
-log.info("button pressed - starting")
+button_int.join()
+
+# start another button interrupt
+button_int = Interrupt()
+button_int.daemon = True # don't have to clean up after
+button_int.start()
 
 com.state(linuxcnc.STATE_ESTOP_RESET)
 com.wait_complete() 
@@ -255,13 +258,10 @@ move_to_charge()
 
 ###############################
 
-# add event handler to catch if it happens while something else is running
-GPIO.add_event_detect(button_pin, GPIO.RISING, callback=shutdown)
-
 dir = '/tmp/gcodes/*ngc'
 try:
     while True:
-        if GPIO.event_detected(button_pin):
+        if not button_int.isAlive():
             raise ShutdownException()
 
         files = glob.glob(dir)
@@ -281,12 +281,12 @@ try:
 
 except KeyboardInterrupt:
     log.info("interrupted!")
-except Exception as e:
-    log.error("got exception: %s" % e)
 except ShutdownException:
     log.warning("shutdown")
     # do the shutdown
     os.system("sudo halt")
+except Exception as e:
+    log.error("unexpected exception! %s" % e)
 
 turn_off_charger()
 log.info("done")
