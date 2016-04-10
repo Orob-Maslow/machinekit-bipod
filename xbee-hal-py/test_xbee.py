@@ -39,7 +39,7 @@ def communicate(amount, flags):
             logging.info( "rx count = %d" % rx_count )
             logging.info( "err_count = %d" % err_count )
             logging.info( "flags = %d" % flags )
-            logging.info( "touch = %d" % touch )
+            logging.info( "batt = %d" % batt )
         else:
             logging.warning("bad cksum")
     else:

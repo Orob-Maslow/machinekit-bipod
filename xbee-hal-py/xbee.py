@@ -68,10 +68,7 @@ h.ready()
 log.debug("hal ready")
 
 def calc_batt(batt_adc):
-    a_in = batt_adc * 3.3 / 1023
-    R2 = 4700.0  # should be 100k but adjusted for RAIN impedance
-    R1 = 10000.0
-    batt_level = a_in / (R1 / (R1+R2))
+    batt_level = batt_adc / 1000.0;
     batt_level = round(batt_level, 2)
     return batt_level
 
