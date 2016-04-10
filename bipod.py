@@ -49,6 +49,9 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 charge_gcode = dir_path + '/charge.ngc'
 precharge_gcode = dir_path + '/precharge.ngc'
 
+#################################################
+# start of functions
+
 def run_program(file):
     log.info("starting program %d: %s" % (program_count, file))
     log.debug("changing to auto mode")
@@ -165,35 +168,6 @@ def wait_till_done():
         if not button_int.isAlive():
             raise ShutdownException()
 
-###########################################################################
-# wait for button
-button_int = Interrupt()
-button_int.start()
-log.info("started - waiting for button")
-button_int.join()
-
-# start another button interrupt
-button_int = Interrupt()
-button_int.daemon = True # don't have to clean up after
-button_int.start()
-
-com.state(linuxcnc.STATE_ESTOP_RESET)
-com.wait_complete() 
-com.state(linuxcnc.STATE_ON)
-com.wait_complete()
-
-log.info("homing all")
-com.home(0)
-com.home(1)
-com.home(2)
-
-while not sta.homed[0:3] == (1,1,1):
-    log.debug("homing...")
-    sta.poll()
-    time.sleep(1)
-
-##############################
-
 def set_g54():
     log.info("changing to mdi mode")
     com.mode(linuxcnc.MODE_MDI)
@@ -206,18 +180,50 @@ def set_g54():
     com.mdi("g10 l2 p1 x%d y%d" % (g54['x'], g54['y']))
     com.feedrate(200)
 
-###############################
 
+###########################################################################
+# start of main
+
+# wait for button
+button_int = Interrupt()
+button_int.start()
+log.info("started - waiting for button")
+button_int.join()
+
+# start another button interrupt
+button_int = Interrupt()
+button_int.daemon = True # don't have to clean up after
+button_int.start()
+
+# get state right
+com.state(linuxcnc.STATE_ESTOP_RESET)
+com.wait_complete() 
+com.state(linuxcnc.STATE_ON)
+com.wait_complete()
+
+# home all
+log.info("homing all")
+com.home(0)
+com.home(1)
+com.home(2)
+
+while not sta.homed[0:3] == (1,1,1):
+    log.debug("homing...")
+    sta.poll()
+    time.sleep(1)
+
+# switch to world mode
 log.info("teleop mode")
 com.teleop_enable(1)
 com.wait_complete()
-# doesn't seem to be a way to check if this worked
 set_g54()
+
+# move to charge pos
+
 move_to_precharge()
 move_to_charge()
 
-###############################
-
+# wait for files to appear
 try:
     while True:
         if not button_int.isAlive():
