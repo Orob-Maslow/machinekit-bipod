@@ -249,7 +249,7 @@ except KeyboardInterrupt:
 except ShutdownException:
     log.warning("shutdown")
     # do the shutdown
-#    os.system("sudo halt")
+    os.system("sudo halt")
 except Exception as e:
     log.error("unexpected exception! %s" % e)
 
