@@ -13,7 +13,8 @@ GOND_FLAG_CHARGE = 1
 GOND_FLAG_SERVO_ENABLE = 2
 
 # max servo angle
-MAX_VAL = 170
+MAX_VAL = 160
+MIN_VAL = 20
 
 # setup log
 log = logging.getLogger('')
@@ -103,8 +104,8 @@ try:
         val = h['pos'] * h['scale']
         if val > MAX_VAL:
             val = MAX_VAL
-        if val < 0:
-            val = 0
+        if val < MIN_VAL:
+            val = MIN_VAL
         communicate(val, flags)
 except KeyboardInterrupt:
     raise SystemExit
