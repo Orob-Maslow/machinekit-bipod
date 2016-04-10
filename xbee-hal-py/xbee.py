@@ -40,7 +40,7 @@ h.newpin("pos", hal.HAL_FLOAT, hal.HAL_IN)
 h['pos'] = 8 # default pen is up
 h.newparam("scale", hal.HAL_FLOAT, hal.HAL_RW)
 h['scale'] = 20 # default
-h.newparam("servo_enable", hal.HAL_BIT, hal.HAL_IN)
+h.newpin("servo_enable", hal.HAL_BIT, hal.HAL_IN)
 h['servo_enable'] = 1
 
 # these for monitoring connection on bbb
