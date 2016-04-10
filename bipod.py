@@ -68,6 +68,14 @@ def run_program(file):
     com.auto(linuxcnc.AUTO_RUN, 0) # second arg is start line
     wait_till_done()
 
+def turn_on_servo():
+    log.info("turning on servo")
+    os.system("halcmd setp xbee.servo_enable 1")
+
+def turn_off_servo():
+    log.info("turning off servo")
+    os.system("halcmd setp xbee.servo_enable 0")
+
 def turn_on_charger():
     log.info("turning on charger")
     os.system("config-pin p9.13 hi")
@@ -79,6 +87,7 @@ def turn_off_charger():
 def move_to_precharge():
     log.info("moving to precharge position")
     turn_off_charger()
+    turn_on_servo()
     run_program(precharge_gcode)
 
 def move_to_charge():
@@ -87,6 +96,9 @@ def move_to_charge():
 
     # turn on power
     turn_on_charger()
+
+    # turn off servo
+    turn_off_servo()
 
     # wait for charge connection
     time.sleep(4)
