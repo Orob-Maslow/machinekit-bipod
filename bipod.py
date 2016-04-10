@@ -16,8 +16,8 @@ err = linuxcnc.error_channel()
 class ShutdownException(Exception):
     pass
 
-def shutdown(channel):
-    raise ShutdownException()
+# where the ngc files are
+dir = '/tmp/gcodes/*ngc'
 
 # gondola flags
 GOND_FLAG_CHARGE = 1
@@ -258,7 +258,6 @@ move_to_charge()
 
 ###############################
 
-dir = '/tmp/gcodes/*ngc'
 try:
     while True:
         if not button_int.isAlive():
@@ -284,7 +283,7 @@ except KeyboardInterrupt:
 except ShutdownException:
     log.warning("shutdown")
     # do the shutdown
-    os.system("sudo halt")
+#    os.system("sudo halt")
 except Exception as e:
     log.error("unexpected exception! %s" % e)
 
