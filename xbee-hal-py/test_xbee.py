@@ -10,6 +10,10 @@ logging.info("xbee started")
 crc8_func = crcmod.predefined.mkPredefinedCrcFun("crc-8-maxim")
 FMT = '<HHHBBB'
 
+# gondola flags
+GOND_FLAG_CHARGE = 1
+GOND_FLAG_SERVO_ENABLE = 2
+
 serial_port=serial.Serial()
 serial_port.port='/dev/ttyO1'
 serial_port.timeout=0.01
@@ -18,10 +22,11 @@ serial_port.open()
 logging.info("port opened")
 
 
-def communicate(amount):
-    bin = struct.pack('<B', amount)
-    logging.info("sending %d [%02x/%02x]", amount, amount, crc8_func(bin))
-    bin = struct.pack('<BB',amount, crc8_func(bin))
+def communicate(amount, flags):
+
+    bin = struct.pack('<BB', amount, flags)
+    bin = struct.pack('<BBB',amount, flags, crc8_func(bin))
+    logging.info("sending %d [%02x/%02x]", amount, flags, crc8_func(bin))
     serial_port.write(bin)
 
     packet_size = struct.calcsize(FMT)
@@ -41,8 +46,9 @@ def communicate(amount):
         logging.warning("wrong packet size got %d not %d" % (len(response), packet_size))
 
 try:
+    flags = GOND_FLAG_SERVO_ENABLE
     for val in range(180):
-        communicate(val)
+        communicate(val, flags)
         """
         communicate(113)
         communicate(114)
