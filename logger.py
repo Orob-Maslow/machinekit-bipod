@@ -1,5 +1,6 @@
 #!/usr/bin/python
 import logging
+import json
 from subprocess import Popen, PIPE
 import requests
 
@@ -21,7 +22,10 @@ fh.setFormatter(log_format)
 log.addHandler(fh)
 
 # start with linuxcnc stuff
-payload = { 'private_key': '87y0npg4jpt3xDgLz9YqT5xrPbq' }
+keys = 'cnckeys.json'
+with open(keys) as fh:
+    json_keys = json.loads(fh.read())
+payload = { 'private_key': json_keys['privateKey']}
 
 log.info("started")
 
@@ -67,12 +71,14 @@ except Exception as e:
 
 # log it
 log.info("logging to phant")
-url = 'http://phant.cursivedata.co.uk/input/L4y9DEbMzEUOdzPYlQ9NSJAXom4'
-r = requests.get(url, params=payload)
+r = requests.get(json_keys['inputUrl'], params=payload)
 log.debug("get status = %d" % r.status_code)
 
 # do the linux stuff
-payload = { "private_key": "45pby8Ab0RcjKmO9qAjYCwmnM8a" }
+keys = 'linuxkeys.json'
+with open(keys) as fh:
+    json_keys = json.loads(fh.read())
+payload = { 'private_key': json_keys['privateKey']}
 
 # get uptime
 with open('/proc/uptime', 'r') as f:
@@ -113,8 +119,7 @@ for process in process_cmds:
         payload[process['name']] = False
 
 # log it
-url = 'http://phant.cursivedata.co.uk/input/3Nx3P463ZJhKwXqzNJKbCJqg13r'
-r = requests.get(url, params=payload)
+r = requests.get(json_keys['inputUrl'], params=payload)
 log.debug("get status = %d" % r.status_code)
 
 log.info("finished")
