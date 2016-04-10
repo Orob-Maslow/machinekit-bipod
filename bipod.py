@@ -26,6 +26,8 @@ err = linuxcnc.error_channel()
 
 class ShutdownException(Exception):
     pass
+class QuitException(Exception):
+    pass
 
 # where the ngc files are
 dir = '/tmp/gcodes/*ngc'
@@ -197,6 +199,17 @@ def check_cmd_message():
     if not q_recv.empty():
         msg = q_recv.get()
         msg = msg.strip()
+
+        if msg == 'quit':
+            log.warning("quitting")
+            q_send.put("quit")
+            raise QuitException()
+        elif msg == 'halt':
+            q_send.put("halt")
+            raise ShutdownException()
+        elif msg == 'programs':
+            q_send.put(str(program_count))
+
         return msg
 
 ###########################################################################
@@ -214,59 +227,49 @@ logger_thread = Thread(target=logger)
 logger_thread.setDaemon(True)
 logger_thread.start()
 
-# wait for signal to start
-log.info("waiting for start command")
-while True:
-    if check_cmd_message() == 'start':
-        q_send.put("start")
-        break
-    time.sleep(0.1)
-
-# get state right
-com.state(linuxcnc.STATE_ESTOP_RESET)
-com.wait_complete() 
-com.state(linuxcnc.STATE_ON)
-com.wait_complete()
-
-# home all
-log.info("homing all..")
-com.home(0)
-com.home(1)
-com.home(2)
-
-while not sta.homed[0:3] == (1,1,1):
-    sta.poll()
-    time.sleep(0.1)
-    if check_cmd_message() == 'quit':
-        log.warning("quitting")
-        q_send.put("quit")
-        exit(1)
-
-# switch to world mode
-log.info("teleop mode")
-com.teleop_enable(1)
-com.wait_complete()
-set_g54()
-
-# move to charge pos
-move_to_precharge()
-
-move_to_charge()
-
-# wait for files to appear
 running = True
+
 try:
+    # wait for signal to start
+    log.info("waiting for start command")
+    while True:
+        if check_cmd_message() == 'start':
+            q_send.put("start")
+            break
+        time.sleep(0.1)
+
+    # get state right
+    com.state(linuxcnc.STATE_ESTOP_RESET)
+    com.wait_complete() 
+    com.state(linuxcnc.STATE_ON)
+    com.wait_complete()
+
+    # home all
+    log.info("homing all..")
+    com.home(0)
+    com.home(1)
+    com.home(2)
+
+    while not sta.homed[0:3] == (1,1,1):
+        sta.poll()
+        time.sleep(0.1)
+        msg = check_cmd_message() 
+
+    # switch to world mode
+    log.info("teleop mode")
+    com.teleop_enable(1)
+    com.wait_complete()
+    set_g54()
+
+    # move to charge pos
+    move_to_precharge()
+
+    move_to_charge()
+
+    # wait for files to appear
     while running:
-        msg = check_cmd_message()
         # here we can request program count, quit or shutdown
-        if msg == 'programs':
-            q_send.put(str(program_count))
-        elif msg == 'quit':
-            q_send.put("quit")
-            running = False
-        elif msg == 'halt':
-            q_send.put("halt")
-            raise ShutdownException()
+        msg = check_cmd_message()
 
         files = glob.glob(dir)
         if len(files) == 0:
@@ -284,14 +287,11 @@ try:
                 log.info("finished")
                 break
             time.sleep(0.1)
-            # here we can skip the program or halt
+            # here we can skip the program
             msg = check_cmd_message()
             if msg == 'skip':
                 q_send.put("skip")
                 break
-            elif msg == 'halt':
-                q_send.put("halt")
-                raise ShutdownException()
 
         program_count += 1
 
@@ -300,7 +300,9 @@ try:
         move_to_charge()
 
 except KeyboardInterrupt:
-    log.info("interrupted!")
+    log.info("keyboard interrupt!")
+except QuitException:
+    log.warning("quitting")
 except ShutdownException:
     log.warning("shutdown")
     # do the shutdown

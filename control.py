@@ -21,29 +21,31 @@ def send(cmd):
     # Clean up
     s.close()
 
-parser = argparse.ArgumentParser(description="control bipod process")
-parser.add_argument('--start',
-    action='store_const', const=True)
-parser.add_argument('--quit',
-    action='store_const', const=True)
-parser.add_argument('--skip',
-    action='store_const', const=True)
-parser.add_argument('--programs',
-    action='store_const', const=True)
-parser.add_argument('--halt',
-    action='store_const', const=True)
+if __name__ == '__main__':
 
-args = parser.parse_args()
+    parser = argparse.ArgumentParser(description="control bipod process")
+    parser.add_argument('--start',
+        action='store_const', const=True)
+    parser.add_argument('--quit',
+        action='store_const', const=True)
+    parser.add_argument('--skip',
+        action='store_const', const=True)
+    parser.add_argument('--programs',
+        action='store_const', const=True)
+    parser.add_argument('--halt',
+        action='store_const', const=True)
 
-# Send the message
-if args.start:
-    send('start')
-elif args.quit:
-    send('quit')
-elif args.skip:
-    send('skip')
-elif args.programs:
-    send('programs')
-elif args.halt:
-    send('halt')
+    args = parser.parse_args()
+
+    # Send the message
+    if args.start:
+        send('start')
+    elif args.quit:
+        send('quit')
+    elif args.skip:
+        send('skip')
+    elif args.programs:
+        send('programs')
+    elif args.halt:
+        send('halt')
 
