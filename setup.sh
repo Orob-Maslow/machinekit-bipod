@@ -34,21 +34,22 @@ dir_err () {
 SLOTS=/sys/devices/bone_capemgr.*/slots
 
 # Make sure required device tree overlay(s) are loaded
-for DTBO in cape-universal cape-bone-iio ; do
+for DTBO in cape-universal ; do
 
 	if grep -q $DTBO $SLOTS ; then
 		echo $DTBO overlay found
 	else
-		echo Loading $DTBO overlay
+		echo Loading $DTBO overlay to $SLOTS
 		sudo -A su -c "echo $DTBO > $SLOTS" || dtbo_err
 		sleep 1
 	fi
 done;
 
-if [ ! -r /sys/devices/ocp.*/helper.*/AIN0 ] ; then
-	echo Analog input files not found in /sys/devices/ocp.*/helper.* >&2
-	exit 1;
-fi
+
+#if [ ! -r /sys/devices/ocp.*/helper.*/AIN0 ] ; then
+#	echo Analog input files not found in /sys/devices/ocp.*/helper.* >&2
+#	exit 1;
+#fi
 
 if [ ! -r /sys/class/uio/uio0 ] ; then
 	echo PRU control files not found in /sys/class/uio/uio0 >&2
@@ -112,9 +113,9 @@ sudo $(which config-pin) -f - <<- EOF
 	P9.21	low	# FET 4 : E1
 	P9.22	low	# FET 6
 	P9.23	low	# Machine Power
-	P9.24	low	# E2 Step
+#	P9.24	low	# E2 Step
 	P9.25	low	# LED
-	P9.26	low	# E2 Dir
+#	P9.26	low	# E2 Dir
 	P9.27	low	# FET 3 : E2
 	P9.28	low	# SPI CS0
 	P9.29	low	# SPI MISO
@@ -128,3 +129,6 @@ sudo $(which config-pin) -f - <<- EOF
 	P9.92	in	# Reserved, connected to P9.42
 EOF
 
+# setup serial
+sudo config-pin P9.24 uart
+sudo config-pin P9.26 uart

@@ -8,6 +8,7 @@
 
 # Launch the setup script to make sure hardware setup looks good
 loadusr -w ./setup.sh
+loadusr -W ./xbee.py
 
 # ###################################
 # Core EMC/HAL Loads
@@ -30,8 +31,6 @@ loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=[TRAJ]AX
 loadrt hal_bb_gpio output_pins=816,822,823,824,825,826,914,923,925 input_pins=807,808,809,810,817,911,913
 loadrt [PRUCONF](DRIVER) prucode=$(HAL_RTMOD_DIR)/[PRUCONF](PRUBIN) [PRUCONF](CONFIG) halname=hpg pru_period=4000
 loadrt limit1 count=2
-loadrt ddt count=4
-loadrt hypot count=1
 
 # ################################################
 # THREADS
@@ -142,9 +141,10 @@ sets emcmot.02.enable FALSE
 net emcmot.02.enable <= axis.2.amp-enable-out
 net emcmot.02.enable => hpg.stepgen.02.enable
 
+#net xbee.in axis.2.motor-pos-cmd => xbee.in
 
 # position command and feedback
-net emcmot.02.pos-cmd <= axis.2.motor-pos-cmd
+net emcmot.02.pos-cmd xbee.in <= axis.2.motor-pos-cmd
 net emcmot.02.pos-cmd => hpg.stepgen.02.position-cmd
 
 net motor.02.pos-fb <= hpg.stepgen.02.position-fb
