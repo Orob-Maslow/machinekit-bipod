@@ -8,7 +8,7 @@
 
 # Launch the setup script to make sure hardware setup looks good
 loadusr -w ./setup.sh
-loadusr -W ./xbee.py
+loadusr -W ./xbee.py 20
 
 # ###################################
 # Core EMC/HAL Loads
@@ -18,7 +18,7 @@ loadusr -W ./xbee.py
 loadrt trivkins
 loadrt bipodkins
 
-setp bipodkins.Bx 450
+setp bipodkins.Bx 520
 
 # motion controller, get name and thread periods from ini file
 # trajectory planner
@@ -134,40 +134,8 @@ setp hpg.stepgen.01.dirpin         814
 # Z [2] Axis
 # ################
 
-# axis enable chain
-newsig emcmot.02.enable bit
-sets emcmot.02.enable FALSE
-
-net emcmot.02.enable <= axis.2.amp-enable-out
-net emcmot.02.enable => hpg.stepgen.02.enable
-
-#net xbee.in axis.2.motor-pos-cmd => xbee.in
-
-# position command and feedback
-net emcmot.02.pos-cmd xbee.in <= axis.2.motor-pos-cmd
-net emcmot.02.pos-cmd => hpg.stepgen.02.position-cmd
-
-net motor.02.pos-fb <= hpg.stepgen.02.position-fb
-net motor.02.pos-fb => axis.2.motor-pos-fb
-
-
-# timing parameters
-setp hpg.stepgen.02.dirsetup        [AXIS_2]DIRSETUP
-setp hpg.stepgen.02.dirhold         [AXIS_2]DIRHOLD
-
-setp hpg.stepgen.02.steplen         [AXIS_2]STEPLEN
-setp hpg.stepgen.02.stepspace       [AXIS_2]STEPSPACE
-
-setp hpg.stepgen.02.position-scale  [AXIS_2]SCALE
-
-setp hpg.stepgen.02.maxvel          [AXIS_2]STEPGEN_MAX_VEL
-setp hpg.stepgen.02.maxaccel        [AXIS_2]STEPGEN_MAX_ACC
-
-#setp hpg.stepgen.02.step_type       0
-# P8.27 PRU1.out8
-setp hpg.stepgen.02.steppin        819
-# P8.29 PRU1.out9
-setp hpg.stepgen.02.dirpin         818
+setp xbee.scale 20
+net zpos axis.2.motor-pos-cmd => xbee.in axis.2.motor-pos-fb
 
 
 # ##################################################
@@ -176,8 +144,8 @@ setp hpg.stepgen.02.dirpin         818
 
 # Create estop signal chain
 # Drive software estop to hardware
-net estop-out iocontrol.0.user-enable-out => bb_gpio.p8.out-26
-setp bb_gpio.p8.out-26.invert 1
+#net estop-out iocontrol.0.user-enable-out => bb_gpio.p8.out-26
+#setp bb_gpio.p8.out-26.invert 1
 
 # Monitor estop input from hardware
 net estop-loop bb_gpio.p8.in-17 => iocontrol.0.emc-enable-in
@@ -197,8 +165,8 @@ net home-x <= bb_gpio.p8.in-08
 net home-y <= bb_gpio.p8.in-07
 
 # Adjust as needed for your switch polarity
-setp bb_gpio.p8.in-08.invert 1
-setp bb_gpio.p8.in-07.invert 1
+#setp bb_gpio.p8.in-08.invert 1
+#setp bb_gpio.p8.in-07.invert 1
 
 # Uncomment if you actually have limit switches setup
 # You probably want to setup homing in the INI file, as well
