@@ -32,10 +32,10 @@ log.addHandler(fh)
 log.info("started")
 
 # this should come from .hal
-width = 2160 
-g54 = { 'x': width/2, 'y': 580, 'z': 0 } # this is where the g54 0,0 point will be
-precharge_pos = { 'x' : 0, 'y' : -120, 'z': 8, 'f' : 7000 } # relative to g54
-charge_pos = { 'x' : 0, 'y' : -240, 'z': 8, 'f' : 2000 } # relative to g54
+width = 2140 
+g54 = { 'x': 0, 'y': 0, 'z': 0 } # this is where the g54 0,0 point will be
+precharge_pos = { 'x' : width/2, 'y' : 390, 'z': 8, 'f' : 7000 } # relative to g54
+charge_pos = { 'x' : width/2, 'y' : 300, 'z': 8, 'f' : 2000 } # relative to g54
 
 # lengthen strings if necessary
 """
@@ -73,12 +73,19 @@ def run_program(file):
     wait_till_done()
 
 
+def turn_on_charger():
+    log.info("turning on charger")
+    os.system("config-pin p9.13 hi")
+
+def turn_off_charger():
+    log.info("turning off charger")
+    os.system("config-pin p9.13 lo")
 
 def move_to_precharge():
     log.info("moving to precharge")
 
-    log.info("turning off charger")
-    os.system("config-pin p9.13 lo")
+    turn_off_charger()
+
     log.debug("changing to auto mode")
     com.mode(linuxcnc.MODE_MDI)
     com.wait_complete() # wait until mode switch executed
@@ -105,8 +112,7 @@ def move_to_charge():
     wait_till_done()
 
     # turn on power
-    log.info("turning on charger")
-    os.system("config-pin p9.13 hi")
+    turn_on_charger()
 
     # wait for charge connection
     time.sleep(2)
@@ -117,8 +123,7 @@ def move_to_charge():
         log.info("docked and charging")
     else:
         log.warning("docked but not charging")
-        log.warning("turning off charger")
-        os.system("config-pin p9.13 lo")
+        turn_off_charger()
 
 
 def gondola_touched():
@@ -137,6 +142,7 @@ def wait_till_done():
     paused = False
     last_log = 0
     while True:
+        """
         if gondola_touched() and not paused:
             log.warning("gondola touch detected - pausing")
             paused = True
@@ -145,7 +151,7 @@ def wait_till_done():
             log.warning("gondola touch OK - resuming")
             paused = False
             com.auto(linuxcnc.AUTO_RESUME)
-            
+        """  
         sta.poll()
         error = err.poll()
         if error:
@@ -232,20 +238,27 @@ move_to_charge()
 ###############################
 
 dir = '/tmp/gcodes/*ngc'
-while True:
-    files = glob.glob(dir)
-    if len(files) == 0:
-        log.info("no files, sleeping")
-        time.sleep(10)
-        continue
+try:
+    while True:
+        files = glob.glob(dir)
+        if len(files) == 0:
+            log.info("no files, sleeping")
+            time.sleep(10)
+            continue
 
-    set_g54() # in case the program changed it
-    move_to_precharge()
-    run_program(files[0])
-    program_count += 1
+        set_g54() # in case the program changed it
+        move_to_precharge()
+        run_program(files[0])
+        program_count += 1
 
-    os.remove(files[0])
-    move_to_precharge()
-    move_to_charge()
+        os.remove(files[0])
+        move_to_precharge()
+        move_to_charge()
 
+except KeyboardInterrupt:
+    log.info("interrupted!")
+except Exception as e:
+    log.error("got exception: %s" % e)
+
+turn_off_charger()
 log.info("done")
