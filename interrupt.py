@@ -21,6 +21,7 @@ class Interrupt(threading.Thread):
         # open & read the file
         fh = open(f)
         fh.read()
+        fh.seek(0)
         poller = select.poll()
         poller.register(fh, select.POLLPRI | select.POLLERR)
 
@@ -28,8 +29,12 @@ class Interrupt(threading.Thread):
         while True:
             events = poller.poll(1)
             if len(events):
-                log.debug("button event")
-                break
+                val = fh.read().strip()
+                fh.seek(0)
+                log.debug("%s = %s" % (f,val))
+                if val == "1":
+                    log.debug("button event")
+                    break
 
             # check override
             try:
@@ -45,20 +50,26 @@ class Interrupt(threading.Thread):
         log.debug("button thread finished")
 
 if __name__ == '__main__':
+    log_format = logging.Formatter('%(asctime)s - %(levelname)-8s - %(message)s')
+    ch = logging.StreamHandler()
+    ch.setFormatter(log_format)
+    log.setLevel(logging.DEBUG)
+    log.addHandler(ch)
+
     thread = Interrupt()
     thread.start()
-    print("blocking")
+    log.info("blocking")
     thread.join()
 
     time.sleep(0.5)
-    print("looping")
+    log.info("looping")
     thread = Interrupt()
     thread.daemon = True
     thread.start()
     while True:
-        print("waiting")
+        log.info("waiting")
         time.sleep(1)
         if not thread.isAlive():
-            print("interrupted")
+            log.info("interrupted")
             thread.join()
             exit(1)
