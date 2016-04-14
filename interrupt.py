@@ -33,7 +33,7 @@ class Interrupt(threading.Thread):
                 fh.seek(0)
                 log.debug("%s = %s" % (f,val))
                 if val == "1":
-                    log.debug("button event")
+                    log.debug("button event %s" % events)
                     break
 
             # check override
