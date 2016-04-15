@@ -6,7 +6,8 @@ import serial
 import struct
 import crcmod
 
-FMT = '<HHHBBB'
+FMT = '<BHHHBBB'
+start_byte = 0xAA
 
 # gondola flags
 GOND_FLAG_CHARGE = 1
@@ -73,15 +74,15 @@ def calc_batt(batt_adc):
     return batt_level
 
 def communicate(amount, flags):
-    bin = struct.pack('<BB', amount, flags)
-    bin = struct.pack('<BBB',amount, flags, crc8_func(bin))
+    bin = struct.pack('<BBB', start_byte, amount, flags)
+    bin = struct.pack('<BBBB', start_byte, amount, flags, crc8_func(bin))
     serial_port.write(bin)
 
     packet_size = struct.calcsize(FMT)
     response = serial_port.read(packet_size)
     if len(response) == packet_size:
-        batt, rx_count, err_count, touch, flags, cksum = struct.unpack(FMT, response)
-        bin = struct.pack('<HHHBB', batt, rx_count, err_count, touch, flags)
+        start, batt, rx_count, err_count, touch, flags, cksum = struct.unpack(FMT, response)
+        bin = struct.pack('<BHHHBB', start, batt, rx_count, err_count, touch, flags)
         # check cksum
         if cksum == crc8_func(bin):
             h['gond_batt'] = calc_batt(batt)

@@ -7,6 +7,16 @@ import logging
 import linuxcnc
 import time
 import pickle
+import SocketServer
+from Queue import Queue
+from threading import Thread
+
+HOST = 'localhost'
+PORT = 10001
+
+# msq queues
+q_recv = Queue(maxsize=0)
+q_send = Queue(maxsize=0)
 
 # setup linuxcnc control/feedback channels
 # http://linuxcnc.org/docs/2.6/html/common/python-interface.html for more details
@@ -26,7 +36,7 @@ GOND_FLAG_SERVO_ENABLE = 2
 
 # count how many programs have been run
 program_count = 0
-log_interval = 5 #seconds
+log_interval = 10 #seconds
 
 # setup logging
 log = logging.getLogger('')
@@ -66,7 +76,6 @@ def run_program(file):
 
     com.program_open(file)
     com.auto(linuxcnc.AUTO_RUN, 0) # second arg is start line
-    wait_till_done()
 
 def turn_on_servo():
     log.info("turning on servo")
@@ -110,35 +119,23 @@ def move_to_charge():
         log.info("docked and charging")
     else:
         log.warning("docked but not charging")
-#        turn_off_charger() # leave it on
 
+def set_g54():
+    log.info("changing to mdi mode")
+    com.mode(linuxcnc.MODE_MDI)
+    com.wait_complete() # wait until mode switch executed
+    sta.poll()
+    if sta.task_mode == linuxcnc.MODE_MDI:
+        log.debug("success")
 
-def gondola_touched():
-    gond_touch = Popen('halcmd getp xbee.gond_touch', shell=True, stdout=PIPE).stdout.read().strip()
-    if gond_touch is not None:
-        try:
-            gond_touch = int(gond_touch)
-            if gond_touch >= 4:
-                log.warning("gondola touch = %d" % gond_touch)
-        
-                return True
-        except ValueError:
-            log.warning("got gondola flag %s couldn't convert to int" % gond_flags)
+    log.info("resetting g54 to x%d y%d z%d" % (g54['x'], g54['y'], g54['z']))
+    com.mdi("g10 l2 p1 x%d y%d" % (g54['x'], g54['y']))
+    com.feedrate(200)
 
-def wait_till_done():
-    paused = False
-    last_log = 0
+# run in a thread
+def logger():
+    last_log = time.time()
     while True:
-        """
-        if gondola_touched() and not paused:
-            log.warning("gondola touch detected - pausing")
-            paused = True
-            com.auto(linuxcnc.AUTO_PAUSE)
-        elif not gondola_touched() and paused:
-            log.warning("gondola touch OK - resuming")
-            paused = False
-            com.auto(linuxcnc.AUTO_RESUME)
-        """  
         sta.poll()
         error = err.poll()
         if error:
@@ -155,59 +152,75 @@ def wait_till_done():
         8  EXEC_WAITING_FOR_SYSTEM_CMD
 
         2, 3 (not much), 5 or 7 (lots)
+
+        interp state
+        1 to 4: INTERP_IDLE, INTERP_READING, INTERP_PAUSED, INTERP_WAITING
+        mostly 1, 2 or 4
+
+        state
+        RCS_DONE, RCS_EXEC, RCS_ERROR.
+        1, 2 (mostly) or 3 - worth investigating state 3
+
+        inter errcode
+        1 to 6: INTERP_OK, INTERP_EXIT, INTERP_EXECUTE_FINISH, INTERP_ENDFILE, INTERP_FILE_NOT_OPEN, INTERP_ERROR 
+        always 0 so far
         """
         if time.time() - last_log > log_interval:
             last_log = time.time()
-            log.debug("exec state %d" % sta.exec_state)
+            log.debug("exec state %d, interp state %d, state %d, errcode %d, line in file %d" % (
+                    sta.exec_state,
+                    sta.interp_state,
+                    sta.state,
+                    sta.interpreter_errcode,
+                    sta.motion_line))
 
-            #1 to 4: INTERP_IDLE, INTERP_READING, INTERP_PAUSED, INTERP_WAITING
-            # 1, 2 or 4
-            log.debug("interp state %d" % sta.interp_state)
+# run in a thread
+class CmdRequestHandler(SocketServer.BaseRequestHandler):
 
-            # RCS_DONE, RCS_EXEC, RCS_ERROR.
-            # 1, 2 (mostly) or 3 - worth investigating state 3
-            log.debug("state %d" % sta.state)
+    def handle(self):
+        # put msg in receive queue
+        cmd = self.request.recv(1024)
+        log.debug("got cmd [%s]" % cmd)
+        q_recv.put(cmd)
 
-            #1 to 6: INTERP_OK, INTERP_EXIT, INTERP_EXECUTE_FINISH, INTERP_ENDFILE, INTERP_FILE_NOT_OPEN, INTERP_ERROR 
-            # always 0 so far
-            log.debug("interp errcode %d" % sta.interpreter_errcode)
-            log.debug("line in file %d" % sta.motion_line)
+        # wait for a second for any reply we're going to send, main thread might be busy
+        time.sleep(1)
 
-        time.sleep(0.1)
-        if sta.interp_state == linuxcnc.INTERP_IDLE:
-            log.info("finished")
-            break
+        # if there is stuff to send back, send it
+        while not q_send.empty():
+            reply = q_send.get()
+            log.debug("sending reply [%s]" % reply)
+            self.request.send(reply)
+        return
 
-        # button pressed? shutdown
-        if not button_int.isAlive():
-            raise ShutdownException()
-
-def set_g54():
-    log.info("changing to mdi mode")
-    com.mode(linuxcnc.MODE_MDI)
-    com.wait_complete() # wait until mode switch executed
-    sta.poll()
-    if sta.task_mode == linuxcnc.MODE_MDI:
-        log.debug("success")
-
-    log.info("resetting g54 to x%d y%d z%d" % (g54['x'], g54['y'], g54['z']))
-    com.mdi("g10 l2 p1 x%d y%d" % (g54['x'], g54['y']))
-    com.feedrate(200)
-
+def check_cmd_message():
+    if not q_recv.empty():
+        msg = q_recv.get()
+        msg = msg.strip()
+        return msg
 
 ###########################################################################
 # start of main
 
-# wait for button
-button_int = Interrupt()
-button_int.start()
-log.info("started - waiting for button")
-button_int.join()
+log.info("starting command server listening on [%s:%d]" % (HOST, PORT))
+SocketServer.TCPServer.allow_reuse_address = True
+server = SocketServer.TCPServer((HOST, PORT), CmdRequestHandler)
 
-# start another button interrupt
-button_int = Interrupt()
-button_int.daemon = True # don't have to clean up after
-button_int.start()
+server_thread = Thread(target=server.serve_forever)
+server_thread.setDaemon(True)
+server_thread.start()
+
+logger_thread = Thread(target=logger)
+logger_thread.setDaemon(True)
+logger_thread.start()
+
+# wait for signal to start
+log.info("waiting for start command")
+while True:
+    if check_cmd_message() == 'start':
+        q_send.put("start")
+        break
+    time.sleep(0.1)
 
 # get state right
 com.state(linuxcnc.STATE_ESTOP_RESET)
@@ -216,15 +229,18 @@ com.state(linuxcnc.STATE_ON)
 com.wait_complete()
 
 # home all
-log.info("homing all")
+log.info("homing all..")
 com.home(0)
 com.home(1)
 com.home(2)
 
 while not sta.homed[0:3] == (1,1,1):
-    log.debug("homing...")
     sta.poll()
-    time.sleep(1)
+    time.sleep(0.1)
+    if check_cmd_message() == 'quit':
+        log.warning("quitting")
+        q_send.put("quit")
+        exit(1)
 
 # switch to world mode
 log.info("teleop mode")
@@ -233,25 +249,50 @@ com.wait_complete()
 set_g54()
 
 # move to charge pos
-
 move_to_precharge()
+
 move_to_charge()
 
 # wait for files to appear
+running = True
 try:
-    while True:
-        if not button_int.isAlive():
+    while running:
+        msg = check_cmd_message()
+        # here we can request program count, quit or shutdown
+        if msg == 'programs':
+            q_send.put(str(program_count))
+        elif msg == 'quit':
+            q_send.put("quit")
+            running = False
+        elif msg == 'halt':
+            q_send.put("halt")
             raise ShutdownException()
 
         files = glob.glob(dir)
         if len(files) == 0:
-            log.info("no files, sleeping")
-            time.sleep(10)
+            if int(time.time()) % 10 == 0:
+                log.info("no files, sleeping")
+            time.sleep(1)
             continue
 
         set_g54() # in case the program changed it
         move_to_precharge()
         run_program(files[0])
+        while True:
+            sta.poll()
+            if sta.interp_state == linuxcnc.INTERP_IDLE:
+                log.info("finished")
+                break
+            time.sleep(0.1)
+            # here we can skip the program or halt
+            msg = check_cmd_message()
+            if msg == 'skip':
+                q_send.put("skip")
+                break
+            elif msg == 'halt':
+                q_send.put("halt")
+                raise ShutdownException()
+
         program_count += 1
 
         os.remove(files[0])

@@ -1,3 +1,5 @@
+#!/usr/bin/python
+
 import time
 import logging
 import serial
@@ -8,7 +10,7 @@ logging.basicConfig(level=logging.DEBUG)
 logging.info("xbee started")
 
 crc8_func = crcmod.predefined.mkPredefinedCrcFun("crc-8-maxim")
-FMT = '<HHHBBB'
+FMT = '<BHHHBBB'
 
 # gondola flags
 GOND_FLAG_CHARGE = 1
@@ -21,21 +23,24 @@ serial_port.baudrate=57600
 serial_port.open()
 logging.info("port opened")
 
+start_byte = 0xAA
 
 def communicate(amount, flags):
 
-    bin = struct.pack('<BB', amount, flags)
-    logging.info("sending %d %d [%02x]", amount, flags, crc8_func(bin))
-    bin = struct.pack('<BBB',amount, flags, crc8_func(bin))
-    serial_port.write(bin)
+    bind = struct.pack('<BBB', start_byte, amount, flags)
+    logging.info("sending %d %d [%02x]", amount, flags, crc8_func(bind))
+    bind = struct.pack('<BBBB', start_byte, amount, flags, crc8_func(bind))
+    logging.debug(map(bin,bytearray(bind)))
+    serial_port.write(bind)
 
     packet_size = struct.calcsize(FMT)
     response = serial_port.read(packet_size)
     if len(response) == packet_size:
-        batt, rx_count, err_count, touch, flags, cksum = struct.unpack(FMT, response)
-        bin = struct.pack('<HHHBB', batt, rx_count, err_count, touch, flags)
+        start, batt, rx_count, err_count, touch, flags, cksum = struct.unpack(FMT, response)
+        bind = struct.pack('<BHHHBB', start, batt, rx_count, err_count, touch, flags)
         # check cksum
-        if cksum == crc8_func(bin):
+        if cksum == crc8_func(bind):
+            logging.info( "start = %02x" % start)
             logging.info( "rx count = %d" % rx_count )
             logging.info( "err_count = %d" % err_count )
             logging.info( "flags = %d" % flags )
