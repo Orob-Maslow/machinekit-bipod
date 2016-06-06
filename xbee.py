@@ -16,8 +16,19 @@ def send_packet(amount):
     bin = struct.pack('<BB',amount, crc8_func(bin))
     serial_port.write(bin)
 
+def get_packet():
+    response = serial_port.read(3)
+    if response:
+        batt, cksum = struct.unpack('<HB', response)
+        bin = struct.pack('<H', batt)
+        # check cksum
+        assert cksum == crc8_func(bin)
+        return batt
+
+
 h = hal.component("xbee")
 h.newpin("in", hal.HAL_FLOAT, hal.HAL_IN)
+h.newpin("batt", hal.HAL_FLOAT, hal.HAL_OUT)
 h.newparam("scale", hal.HAL_FLOAT, hal.HAL_RW)
 
 logging.info("scale = %d" % h['scale'])
@@ -36,8 +47,15 @@ logging.info("hal ready")
 try:
     while 1:
         time.sleep(0.05)
-	val = h['in'] * h['scale']
-        if val >= 0 and val <= 255:
-	    send_packet(val)
+        val = h['in'] * h['scale']
+        val += 10 #TODO 
+        send_packet(val)
+        batt = get_packet()
+        if batt is not None:
+            h['batt'] = batt
+        else:
+            h['batt'] = -1
+
+
 except KeyboardInterrupt:
     raise SystemExit
