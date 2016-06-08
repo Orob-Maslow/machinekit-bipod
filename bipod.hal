@@ -15,10 +15,10 @@ loadusr -W ./xbee.py 20
 # ###################################
 
 # kinematics
-loadrt trivkins
+# loadrt trivkins
 loadrt bipodkins
 
-setp bipodkins.Bx 520
+setp bipodkins.Bx 445
 
 # motion controller, get name and thread periods from ini file
 # trajectory planner

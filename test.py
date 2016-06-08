@@ -11,8 +11,8 @@ import pickle
 tmp_file = '/tmp/pos.pkl'
 pos_file = '/home/machinekit/pos.pkl'
 safe_home_pos = { 'l' : 350, 'r': 350 } # these should come from .ini
-width = 520 # should come from .hal
-g54 = { 'x': width/2, 'y': 240 } # this should be calculated from home string lengths
+width = 445 # should come from .hal
+g54 = { 'x': width/2, 'y': 270 } # this should be calculated from home string lengths
 charge_pos = { 'x' : 0, 'y' : -120 } # relative to g54
 
 def pre_home_jog():
@@ -44,6 +44,13 @@ def atomic_write(pos):
 
 	os.rename(tmp_file, pos_file)
 
+# run this in a thread
+def store_pos():
+	joints = sta.joint_actual_position
+	pos = { 'l' : joints[0], 'r' : joints[1] }
+	logging.info("storing joint position %d %d" % (pos['l'], pos['r']))
+	atomic_write(pos)
+
 def run_program(file):
 	logging.info("changing to auto mode")
 	com.mode(linuxcnc.MODE_AUTO)
@@ -62,14 +69,12 @@ def run_program(file):
 		logging.info("state %d" % sta.state)
 		logging.info("interp errcode %d" % sta.interpreter_errcode)
 		# store the position on the disk in case of a power failure
-		joints = sta.joint_actual_position
-		pos = { 'l' : joints[0], 'r' : joints[1] }
-		print(pos)
-		atomic_write(pos)
+		store_pos()
 		time.sleep(0.5)
 		if sta.interp_state == linuxcnc.INTERP_IDLE:
 			logging.info("finished")
 			break
+
 
 def move_to_charge():
 	logging.info("moving back to charging position")
@@ -88,7 +93,8 @@ def move_to_charge():
 		logging.info("interp state %d" % sta.interp_state)
 		logging.info("state %d" % sta.state)
 		logging.info("interp errcode %d" % sta.interpreter_errcode)
-		time.sleep(1)
+		time.sleep(0.5)
+		store_pos()
 		if sta.interp_state == linuxcnc.INTERP_IDLE:
 			break
 
