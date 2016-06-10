@@ -49,6 +49,10 @@ try:
         time.sleep(0.05)
         val = h['in'] * h['scale']
         val += 10 #TODO 
+        if val > 255:
+            val = 255
+        if val < 0:
+            val = 0
         send_packet(val)
         batt = get_packet()
         if batt is not None:
