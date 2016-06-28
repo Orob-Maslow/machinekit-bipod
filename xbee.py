@@ -22,8 +22,8 @@ def get_packet():
         batt, cksum = struct.unpack('<HB', response)
         bin = struct.pack('<H', batt)
         # check cksum
-        assert cksum == crc8_func(bin)
-        return batt
+        if cksum == crc8_func(bin):
+            return batt
 
 
 h = hal.component("xbee")
@@ -48,9 +48,8 @@ try:
     while 1:
         time.sleep(0.05)
         val = h['in'] * h['scale']
-        val += 10 #TODO 
-        if val > 255:
-            val = 255
+        if val > 180: #max angle is 180
+            val = 180
         if val < 0:
             val = 0
         send_packet(val)
