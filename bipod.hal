@@ -18,7 +18,7 @@ loadusr -W ./xbee.py 20
 # loadrt trivkins
 loadrt bipodkins
 
-setp bipodkins.Bx 445
+setp bipodkins.Bx 2265
 
 # motion controller, get name and thread periods from ini file
 # trajectory planner
@@ -150,7 +150,7 @@ net estop-loop bb_gpio.p9.in-11 => iocontrol.0.emc-enable-in
 
 # Axis enable signal (active low)
 net emcmot.00.enable => bb_gpio.p9.out-14
-setp bb_gpio.p9.out-14.invert 1
+#setp bb_gpio.p9.out-14.invert 1
 
 # ################
 # Limit Switches
@@ -161,9 +161,6 @@ newsig home-y bit
 net home-x <= bb_gpio.p9.in-21
 net home-y <= bb_gpio.p9.in-22
 
-# Adjust as needed for your switch polarity
-#setp bb_gpio.p8.in-08.invert 1
-setp bb_gpio.p9.in-22.invert 1
 
 # Uncomment if you actually have limit switches setup
 # You probably want to setup homing in the INI file, as well
