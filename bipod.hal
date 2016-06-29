@@ -136,7 +136,7 @@ setp hpg.stepgen.01.dirpin         916
 # ################
 
 setp xbee.0.scale 20
-net zpos axis.2.motor-pos-cmd => xbee.0.in axis.2.motor-pos-fb
+net zpos axis.2.motor-pos-cmd => xbee.0.pos axis.2.motor-pos-fb
 
 
 # ##################################################
