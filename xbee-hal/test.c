@@ -22,7 +22,7 @@ struct {
 
 void setup()
 {
-    if ((fd = open("/dev/ttyO1", O_RDWR))<0)
+    if ((fd = open("/dev/ttyO1", O_RDWR | O_NONBLOCK))<0)
     {
         printf("UART: Failed to open the file.\n");
         return;
@@ -68,20 +68,23 @@ void main(void)
     int i = 0;
     for(i = 0; i< 100; i+=10)
     {
-        printf("pos %d", i);
+        printf("pos %d\n", i);
         tx.pos = i; //in;
         char buf[sizeof(tx)];
         memcpy(&buf, &tx, sizeof(tx));
         tx.cksum = CRC8(buf,sizeof(tx)-1);
         memcpy(&buf, &tx, sizeof(tx));
 
+        printf("writing...\n");
         write (fd, buf, sizeof(tx));
+        printf("done\n");
 
-        usleep (25 * 1000);             // sleep enough to transmit the 7 plus
+        usleep (35 * 1000);             // sleep enough to transmit the 7 plus
 
         char rx_buf[RX_SIZE];
+        printf("reading...\n");
         int n = read(fd, rx_buf, RX_SIZE);
-        printf("%d", sizeof(rx));
+        printf("done\n");
 
         //copy buffer to structure
         memcpy(&rx, &rx_buf, RX_SIZE);
