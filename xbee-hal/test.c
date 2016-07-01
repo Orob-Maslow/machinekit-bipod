@@ -65,33 +65,46 @@ char CRC8(char *data, char len)
 void main(void)
 {
     setup();
+    int bad_ck = 0;
+    int no_rx = 0;
     int i = 0;
-    for(i = 0; i< 100; i+=10)
+    for(i = 0; i< 100; i+=1)
     {
-        printf("pos %d\n", i);
+//        printf("pos %d\n", i);
         tx.pos = i; //in;
         char buf[sizeof(tx)];
         memcpy(&buf, &tx, sizeof(tx));
         tx.cksum = CRC8(buf,sizeof(tx)-1);
         memcpy(&buf, &tx, sizeof(tx));
 
-        printf("writing...\n");
+//        printf("writing...\n");
         write (fd, buf, sizeof(tx));
-        printf("done\n");
+ //       printf("done\n");
 
-        usleep (35 * 1000);             // sleep enough to transmit the 7 plus
+        usleep (20 * 1000);             // sleep enough to transmit the 7 plus
 
         char rx_buf[RX_SIZE];
-        printf("reading...\n");
+   //     printf("reading...\n");
         int n = read(fd, rx_buf, RX_SIZE);
-        printf("done\n");
+        if(n!= RX_SIZE)
+        {
+            no_rx ++;
+            continue;
+        }
+            
 
         //copy buffer to structure
         memcpy(&rx, &rx_buf, RX_SIZE);
         printf("read %d : %x %x %x\n", n, rx_buf[0], rx_buf[1], rx_buf[2]);
         if(rx.cksum != CRC8(rx_buf,RX_SIZE-1))
+        {
             printf("bad cksum\n");
-        else
-            printf("batt %d\n", rx.batt);
+            bad_ck ++;
+        }
+    //    else
+     //       printf("batt %d\n", rx.batt);
     }
+    printf("----------------\n");
+    printf("bad cks %d\n", bad_ck);
+    printf("no rx  %d\n", no_rx);
 }
