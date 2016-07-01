@@ -27,8 +27,8 @@ log.info("started")
 
 # this should come from .hal
 width = 2265 
-g54 = { 'x': width/2, 'y': 1000 } # this is where the 0,0 point will be
-charge_pos = { 'x' : 0, 'y' : -250 } # relative to g54
+g54 = { 'x': width/2, 'y': 1320 } # this is where the g54 0,0 point will be
+charge_pos = { 'x' : 0, 'y' : 0 } # relative to g54
 
 # lengthen strings if necessary
 """
@@ -52,22 +52,22 @@ def pre_home_jog():
 """
 
 def run_program(file):
-    log.info("changing to auto mode")
+    log.debug("changing to auto mode")
     com.mode(linuxcnc.MODE_AUTO)
     com.wait_complete() # wait until mode switch executed
     sta.poll()
 
     if sta.task_mode == linuxcnc.MODE_AUTO:
-        log.info("success")
+        log.debug("success")
 
     com.program_open(file)
     com.auto(linuxcnc.AUTO_RUN, 0) # second arg is start line
     while True:
         sta.poll()
-        log.info("exec state %d" % sta.exec_state)
-        log.info("interp state %d" % sta.interp_state)
-        log.info("state %d" % sta.state)
-        log.info("interp errcode %d" % sta.interpreter_errcode)
+        log.debug("exec state %d" % sta.exec_state)
+        log.debug("interp state %d" % sta.interp_state)
+        log.debug("state %d" % sta.state)
+        log.debug("interp errcode %d" % sta.interpreter_errcode)
         time.sleep(10)
         if sta.interp_state == linuxcnc.INTERP_IDLE:
             log.info("finished")
@@ -80,17 +80,17 @@ def move_to_charge():
     com.wait_complete() # wait until mode switch executed
     sta.poll()
     if sta.task_mode == linuxcnc.MODE_MDI:
-        log.info("success")
+        log.debug("success")
 
     log.info("sending gcode x%d y%d" % (charge_pos['x'], charge_pos['y']))
     com.mdi("g0 x%d y%d" % (charge_pos['x'], charge_pos['y']))
 
     while True:
         sta.poll()
-        log.info("exec state %d" % sta.exec_state)
-        log.info("interp state %d" % sta.interp_state)
-        log.info("state %d" % sta.state)
-        log.info("interp errcode %d" % sta.interpreter_errcode)
+        log.debug("exec state %d" % sta.exec_state)
+        log.debug("interp state %d" % sta.interp_state)
+        log.debug("state %d" % sta.state)
+        log.debug("interp errcode %d" % sta.interpreter_errcode)
         time.sleep(5)
         if sta.interp_state == linuxcnc.INTERP_IDLE:
             break
@@ -110,7 +110,7 @@ com.home(1)
 com.home(2)
 
 while not sta.homed[0:3] == (1,1,1):
-    log.info("homing...")
+    log.debug("homing...")
     sta.poll()
     time.sleep(1)
 
@@ -128,7 +128,7 @@ com.mode(linuxcnc.MODE_MDI)
 com.wait_complete() # wait until mode switch executed
 sta.poll()
 if sta.task_mode == linuxcnc.MODE_MDI:
-    log.info("success")
+    log.debug("success")
 
 log.info("resetting g54 to x%d y%d" % (g54['x'], g54['y']))
 com.mdi("g10 l2 p1 x%d y%d" % (g54['x'], g54['y']))
@@ -151,6 +151,5 @@ while True:
 
     os.remove(files[0])
     move_to_charge()
-
 
 log.info("done")
