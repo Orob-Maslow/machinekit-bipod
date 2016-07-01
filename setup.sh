@@ -51,6 +51,8 @@ done;
 #	exit 1;
 #fi
 
+sleep 2 # try this to stop the following from always breaking on first load
+
 if [ ! -r /sys/class/uio/uio0 ] ; then
 	echo PRU control files not found in /sys/class/uio/uio0 >&2
 	exit 1;
@@ -87,3 +89,4 @@ sudo $(which config-pin) -f - <<- EOF
     P9.21 in    # home x
     P9.22 in    # home y
 EOF
+

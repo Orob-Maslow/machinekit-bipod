@@ -24,7 +24,7 @@ pins = [
     { 'pin' : 'axis.2.motor-pos-cmd', 'tag': 'zpos' },
     { 'pin' : 'xbee.batt', 'tag': 'xbeebatt' },
     { 'pin' : 'xbee.cksum-err', 'tag': 'xbeecksumerr' },
-    { 'pin' : 'xbee.no-rx-err', 'tag': 'xbeerxerr' },
+    { 'pin' : 'xbee.rx-err', 'tag': 'xbeerxerr' },
     ]
 
 payload = { 'private_key': '87y0npg4jpt3xDgLz9YqT5xrPbq' }

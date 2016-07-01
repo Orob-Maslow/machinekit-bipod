@@ -27,7 +27,7 @@ log.info("started")
 
 # this should come from .hal
 width = 2265 
-g54 = { 'x': width/2, 'y': 1320 } # this is where the g54 0,0 point will be
+g54 = { 'x': width/2, 'y': 1390 } # this is where the g54 0,0 point will be
 charge_pos = { 'x' : 0, 'y' : 0 } # relative to g54
 
 # lengthen strings if necessary

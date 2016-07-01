@@ -8,7 +8,7 @@
 
 # Launch the setup script to make sure hardware setup looks good
 loadusr -w ./setup.sh
-loadrt xbee
+loadusr -W xbee.py 20
 
 # ###################################
 # Core EMC/HAL Loads
@@ -25,7 +25,7 @@ setp bipodkins.Bx 2265
 loadrt tp
 loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD num_joints=[TRAJ]AXES tp=tp kins=bipodkins
 #loadrt [EMCMOT]EMCMOT servo_period_nsec=[EMCMOT]SERVO_PERIOD
-loadrt threads name3=xbee-thread period3=50000000 # 50ms, xbee takes max 25ms
+#loadrt threads name3=xbee-thread period3=50000000 # 50ms, xbee takes max 25ms
 
 
 # load low-level drivers
@@ -47,7 +47,7 @@ addf limit1.1                             servo-thread
 addf hpg.update             servo-thread
 addf bb_gpio.write                        servo-thread
 
-addf xbee.0 xbee-thread
+#addf xbee xbee-thread
 
 
 # ######################################################
@@ -134,8 +134,8 @@ setp hpg.stepgen.01.dirpin         916
 # Z [2] Axis
 # ################
 
-setp xbee.0.scale 20
-net zpos axis.2.motor-pos-cmd => xbee.0.pos axis.2.motor-pos-fb
+setp xbee.scale 20
+net zpos axis.2.motor-pos-cmd => xbee.pos axis.2.motor-pos-fb
 
 
 # ##################################################
