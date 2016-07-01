@@ -8,7 +8,6 @@
 
 # Launch the setup script to make sure hardware setup looks good
 loadusr -w ./setup.sh
-#loadusr -W ./xbee.py 20
 loadrt xbee
 
 # ###################################
