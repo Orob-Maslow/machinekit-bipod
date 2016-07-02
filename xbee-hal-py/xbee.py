@@ -28,7 +28,7 @@ logging.info("scale = %d" % h['scale'])
 
 serial_port=serial.Serial()
 serial_port.port='/dev/ttyO1'
-serial_port.timeout=0.03
+serial_port.timeout=0.05
 serial_port.baudrate=57600
 serial_port.open()
 logging.info("port opened")
