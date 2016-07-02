@@ -10,30 +10,19 @@ logging.info("xbee started")
 
 crc8_func = crcmod.predefined.mkPredefinedCrcFun("crc-8-maxim")
 
-def communicate(amount):
-    bin = struct.pack('<B', amount)
-    bin = struct.pack('<BB',amount, crc8_func(bin))
-    serial_port.write(bin)
-
-    response = serial_port.read(3)
-    if response:
-        batt, cksum = struct.unpack('<HB', response)
-        bin = struct.pack('<H', batt)
-        # check cksum
-        if cksum == crc8_func(bin):
-            h['batt'] = batt
-        else:
-            h['cksum-err'] += 1
-    else:
-        h['rx-err'] += 1
-
-
 h = hal.component("xbee")
+# these for control
 h.newpin("pos", hal.HAL_FLOAT, hal.HAL_IN)
-h.newpin("batt", hal.HAL_U32, hal.HAL_OUT)
-h.newpin("cksum-err", hal.HAL_U32, hal.HAL_OUT)
-h.newpin("rx-err", hal.HAL_U32, hal.HAL_OUT)
 h.newparam("scale", hal.HAL_FLOAT, hal.HAL_RW)
+
+# these for monitoring connection on bbb
+h.newpin("rx-err", hal.HAL_U32, hal.HAL_OUT)
+h.newpin("cksum-err", hal.HAL_U32, hal.HAL_OUT)
+
+# these for monitoring connection on gondola
+h.newpin("gond_batt", hal.HAL_U32, hal.HAL_OUT)
+h.newpin("gond_rx_count", hal.HAL_U32, hal.HAL_OUT)
+h.newpin("gond_err_count", hal.HAL_U32, hal.HAL_OUT)
 
 logging.info("scale = %d" % h['scale'])
 
@@ -46,6 +35,25 @@ logging.info("port opened")
 
 h.ready()
 logging.info("hal ready")
+
+def communicate(amount):
+    bin = struct.pack('<B', amount)
+    bin = struct.pack('<BB',amount, crc8_func(bin))
+    serial_port.write(bin)
+
+    response = serial_port.read(7)
+    if response:
+        batt, rx_count, err_count, cksum = struct.unpack('<HHHB', response)
+        bin = struct.pack('<HHH', batt, rx_count, err_count)
+        # check cksum
+        if cksum == crc8_func(bin):
+            h['gond_batt'] = batt
+            h['gond_rx_count'] = rx_count
+            h['gond_err_count'] = err_count
+        else:
+            h['cksum-err'] += 1
+    else:
+        h['rx-err'] += 1
 
 try:
     while 1:
