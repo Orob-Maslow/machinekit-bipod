@@ -20,6 +20,8 @@ fh = logging.FileHandler('xbee.log')
 fh.setFormatter(log_format)
 log.addHandler(fh)
 
+log.info("xbee HAL component started")
+
 crc8_func = crcmod.predefined.mkPredefinedCrcFun("crc-8-maxim")
 
 h = hal.component("xbee")
@@ -36,17 +38,17 @@ h.newpin("gond_batt", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("gond_rx_count", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("gond_err_count", hal.HAL_U32, hal.HAL_OUT)
 
-log.info("scale = %d" % h['scale'])
+log.debug("scale = %d" % h['scale'])
 
 serial_port=serial.Serial()
 serial_port.port='/dev/ttyO1'
 serial_port.timeout=0.05
 serial_port.baudrate=57600
 serial_port.open()
-log.info("port opened")
+log.debug("port opened")
 
 h.ready()
-log.info("hal ready")
+log.debug("hal ready")
 
 def communicate(amount):
     bin = struct.pack('<B', amount)
@@ -81,3 +83,5 @@ except KeyboardInterrupt:
     log.error("keyboard interrupt")
 except Exception as e:
     log.error(e)
+
+log.info("ending")
