@@ -26,14 +26,11 @@ log.info("started")
 
 # define HAL stuff to log
 pins = [
-    { 'pin' : 'axis.0.motor-pos-cmd', 'tag': 'xpos' },
-    { 'pin' : 'axis.1.motor-pos-cmd', 'tag': 'ypos' },
-    { 'pin' : 'axis.2.motor-pos-cmd', 'tag': 'zpos' },
-    { 'pin' : 'xbee.gond_batt', 'tag': 'gondbatt' },
-    { 'pin' : 'xbee.gond_rx_count', 'tag': 'gondrxcount' },
-    { 'pin' : 'xbee.gond_err_count', 'tag': 'gonderrcount' },
-    { 'pin' : 'xbee.cksum-err', 'tag': 'xbeecksumerr' },
-    { 'pin' : 'xbee.rx-err', 'tag': 'xbeerxerr' },
+    { 'pin' : 'xbee.gond_batt', 'tag': 'pen_batt' },
+    { 'pin' : 'xbee.gond_rx_count', 'tag': 'pen_rxcount' },
+    { 'pin' : 'xbee.gond_err_count', 'tag': 'pen_errcount' },
+    { 'pin' : 'xbee.cksum-err', 'tag': 'xbee_cksumerr' },
+    { 'pin' : 'xbee.rx-err', 'tag': 'xbee_rxerr' },
     ]
 
 # fetch robot data from the HAL
@@ -50,6 +47,17 @@ for pin in pins:
 with open('/proc/uptime', 'r') as f:
     uptime_seconds = float(f.readline().split()[0])
     payload["uptime"] = uptime_seconds
+
+# get linuxcnc stats
+import linuxcnc
+sta = linuxcnc.stat()
+sta.poll()
+payload['cnc_execstate'] = sta.exec_state
+payload['cnc_interpstate'] = sta.interp_state
+payload['cnc_state'] = sta.state
+payload['xpos'] = sta.position[0]
+payload['ypos'] = sta.position[1]
+payload['zpos'] = sta.position[2]
 
 # log it
 log.info("logging to phant")
