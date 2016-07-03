@@ -5,8 +5,20 @@ import serial
 import struct
 import crcmod
 
-logging.basicConfig(level=logging.DEBUG)
-logging.info("xbee started")
+# setup log
+log = logging.getLogger('')
+log.setLevel(logging.DEBUG)
+
+# create console handler and set level to info
+log_format = logging.Formatter('%(asctime)s - %(levelname)-8s - %(message)s')
+ch = logging.StreamHandler()
+ch.setFormatter(log_format)
+log.addHandler(ch)
+
+# create file handler and set to debug
+fh = logging.FileHandler('xbee.log')
+fh.setFormatter(log_format)
+log.addHandler(fh)
 
 crc8_func = crcmod.predefined.mkPredefinedCrcFun("crc-8-maxim")
 
@@ -24,17 +36,17 @@ h.newpin("gond_batt", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("gond_rx_count", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("gond_err_count", hal.HAL_U32, hal.HAL_OUT)
 
-logging.info("scale = %d" % h['scale'])
+log.info("scale = %d" % h['scale'])
 
 serial_port=serial.Serial()
 serial_port.port='/dev/ttyO1'
 serial_port.timeout=0.05
 serial_port.baudrate=57600
 serial_port.open()
-logging.info("port opened")
+log.info("port opened")
 
 h.ready()
-logging.info("hal ready")
+log.info("hal ready")
 
 def communicate(amount):
     bin = struct.pack('<B', amount)
@@ -64,6 +76,8 @@ try:
         if val < 0:
             val = 0
         communicate(val)
-
 except KeyboardInterrupt:
     raise SystemExit
+    log.error("keyboard interrupt")
+except Exception as e:
+    log.error(e)
