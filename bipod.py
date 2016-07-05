@@ -29,9 +29,9 @@ log.info("started")
 
 # this should come from .hal
 width = 2265 
-g54 = { 'x': width/2, 'y': 1050 } # this is where the g54 0,0 point will be
-pre_charge_pos = { 'x' : 0, 'y' : -350, 'f' : 7000 } # relative to g54
-charge_pos = { 'x' : 0, 'y' : -420, 'f' : 2000 } # relative to g54
+g54 = { 'x': width/2, 'y': 1050 -200 } # this is where the g54 0,0 point will be
+pre_charge_pos = { 'x' : 0, 'y' : -350 + 200, 'z': 8, 'f' : 7000 } # relative to g54
+charge_pos = { 'x' : 0, 'y' : -430 + 200, 'z': 8, 'f' : 2000 } # relative to g54
 
 # lengthen strings if necessary
 """
@@ -98,11 +98,14 @@ def move_to_charge():
     wait_till_done()
 
 def gondola_touched():
-    gond_flags = Popen('halcmd getp xbee.gond_flags', shell=True, stdout=PIPE).stdout.read().strip()
-    if gond_flags is not None:
+    gond_touch = Popen('halcmd getp xbee.gond_touch', shell=True, stdout=PIPE).stdout.read().strip()
+    if gond_touch is not None:
         try:
-            gond_flags = int(gond_flags)
-            if gond_flags & GOND_FLAG_TOUCH:
+            gond_touch = int(gond_touch)
+            if gond_touch > 5:
+   #         gond_flags = int(gond_flags)
+   #         if gond_flags & GOND_FLAG_TOUCH:
+        
                 return True
         except ValueError:
             log.warning("got gondola flag %s couldn't convert to int" % gond_flags)
@@ -122,7 +125,8 @@ def wait_till_done():
         sta.poll()
         error = err.poll()
         if error:
-            log.warning("error: %s" % error)
+            kind, text = error
+            log.warning("error: %s" % text)
         """
         1 EXEC_ERROR
         2  EXEC_DONE
