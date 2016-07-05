@@ -37,6 +37,7 @@ h.newpin("cksum-err", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("gond_batt", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("gond_rx_count", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("gond_err_count", hal.HAL_U32, hal.HAL_OUT)
+h.newpin("gond_flags", hal.HAL_U32, hal.HAL_OUT)
 
 log.debug("scale = %d" % h['scale'])
 
@@ -50,20 +51,23 @@ log.debug("port opened")
 h.ready()
 log.debug("hal ready")
 
+packet_size = 8
+
 def communicate(amount):
     bin = struct.pack('<B', amount)
     bin = struct.pack('<BB',amount, crc8_func(bin))
     serial_port.write(bin)
 
-    response = serial_port.read(7)
-    if response:
-        batt, rx_count, err_count, cksum = struct.unpack('<HHHB', response)
-        bin = struct.pack('<HHH', batt, rx_count, err_count)
+    response = serial_port.read(packet_size)
+    if len(response) == packet_size:
+        batt, rx_count, err_count, flags, cksum = struct.unpack('<HHHBB', response)
+        bin = struct.pack('<HHHB', batt, rx_count, err_count, flags)
         # check cksum
         if cksum == crc8_func(bin):
             h['gond_batt'] = batt
             h['gond_rx_count'] = rx_count
             h['gond_err_count'] = err_count
+            h['gond_flags'] = flags
         else:
             h['cksum-err'] += 1
     else:
