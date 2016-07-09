@@ -5,6 +5,9 @@ import serial
 import struct
 import crcmod
 
+# max servo angle
+MAX_VAL = 170
+
 # setup log
 log = logging.getLogger('')
 log.setLevel(logging.DEBUG)
@@ -27,7 +30,9 @@ crc8_func = crcmod.predefined.mkPredefinedCrcFun("crc-8-maxim")
 h = hal.component("xbee")
 # these for control
 h.newpin("pos", hal.HAL_FLOAT, hal.HAL_IN)
+h['pos'] = 8 # default pen is up
 h.newparam("scale", hal.HAL_FLOAT, hal.HAL_RW)
+h['scale'] = 20 # default
 
 # these for monitoring connection on bbb
 h.newpin("rx-err", hal.HAL_U32, hal.HAL_OUT)
@@ -37,7 +42,8 @@ h.newpin("cksum-err", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("gond_batt", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("gond_rx_count", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("gond_err_count", hal.HAL_U32, hal.HAL_OUT)
-h.newpin("gond_flags", hal.HAL_U32, hal.HAL_OUT)
+#h.newpin("gond_flags", hal.HAL_U32, hal.HAL_OUT)
+h.newpin("gond_touch", hal.HAL_U32, hal.HAL_OUT)
 
 log.debug("scale = %d" % h['scale'])
 
@@ -60,14 +66,14 @@ def communicate(amount):
 
     response = serial_port.read(packet_size)
     if len(response) == packet_size:
-        batt, rx_count, err_count, flags, cksum = struct.unpack('<HHHBB', response)
-        bin = struct.pack('<HHHB', batt, rx_count, err_count, flags)
+        batt, rx_count, err_count, touch, cksum = struct.unpack('<HHHBB', response)
+        bin = struct.pack('<HHHB', batt, rx_count, err_count, touch)
         # check cksum
         if cksum == crc8_func(bin):
             h['gond_batt'] = batt
             h['gond_rx_count'] = rx_count
             h['gond_err_count'] = err_count
-            h['gond_flags'] = flags
+            h['gond_touch'] = touch
         else:
             h['cksum-err'] += 1
     else:
@@ -77,8 +83,8 @@ try:
     while 1:
         time.sleep(0.05)
         val = h['pos'] * h['scale']
-        if val > 180: #max angle is 180
-            val = 180
+        if val > MAX_VAL:
+            val = MAX_VAL
         if val < 0:
             val = 0
         communicate(val)
