@@ -11,6 +11,10 @@ import pickle
 # gondola flags
 GOND_FLAG_TOUCH = 1
 
+# count how many programs have been run
+program_count = 0
+log_interval = 5 #seconds
+
 log = logging.getLogger('')
 log.setLevel(logging.DEBUG)
 
@@ -28,10 +32,10 @@ log.addHandler(fh)
 log.info("started")
 
 # this should come from .hal
-width = 2265 
-g54 = { 'x': width/2, 'y': 1050 -200 } # this is where the g54 0,0 point will be
-pre_charge_pos = { 'x' : 0, 'y' : -350 + 200, 'z': 8, 'f' : 7000 } # relative to g54
-charge_pos = { 'x' : 0, 'y' : -430 + 200, 'z': 8, 'f' : 2000 } # relative to g54
+width = 2370 
+g54 = { 'x': width/2, 'y': 600 } # this is where the g54 0,0 point will be
+pre_charge_pos = { 'x' : 30, 'y' : 0, 'z': 8, 'f' : 7000 } # relative to g54
+charge_pos = { 'x' : 30, 'y' : -211, 'z': 8, 'f' : 2000 } # relative to g54
 
 # lengthen strings if necessary
 """
@@ -55,7 +59,7 @@ def pre_home_jog():
 """
 
 def run_program(file):
-    log.info("starting program: %s" % file)
+    log.info("starting program %d: %s" % (program_count, file))
     log.debug("changing to auto mode")
     com.mode(linuxcnc.MODE_AUTO)
     com.wait_complete() # wait until mode switch executed
@@ -102,7 +106,8 @@ def gondola_touched():
     if gond_touch is not None:
         try:
             gond_touch = int(gond_touch)
-            if gond_touch > 5:
+            if gond_touch >= 4:
+                log.warning("gondola touch = %d" % gond_touch)
    #         gond_flags = int(gond_flags)
    #         if gond_flags & GOND_FLAG_TOUCH:
         
@@ -112,6 +117,7 @@ def gondola_touched():
 
 def wait_till_done():
     paused = False
+    last_log = 0
     while True:
         if gondola_touched() and not paused:
             log.warning("gondola touch detected - pausing")
@@ -139,21 +145,24 @@ def wait_till_done():
 
         2, 3 (not much), 5 or 7 (lots)
         """
-        log.debug("exec state %d" % sta.exec_state)
+        if time.time() - last_log > log_interval:
+            last_log = time.time()
+            log.debug("exec state %d" % sta.exec_state)
 
-        #1 to 4: INTERP_IDLE, INTERP_READING, INTERP_PAUSED, INTERP_WAITING
-        # 1, 2 or 4
-        log.debug("interp state %d" % sta.interp_state)
+            #1 to 4: INTERP_IDLE, INTERP_READING, INTERP_PAUSED, INTERP_WAITING
+            # 1, 2 or 4
+            log.debug("interp state %d" % sta.interp_state)
 
-        # RCS_DONE, RCS_EXEC, RCS_ERROR.
-        # 1, 2 (mostly) or 3 - worth investigating state 3
-        log.debug("state %d" % sta.state)
+            # RCS_DONE, RCS_EXEC, RCS_ERROR.
+            # 1, 2 (mostly) or 3 - worth investigating state 3
+            log.debug("state %d" % sta.state)
 
-        #1 to 6: INTERP_OK, INTERP_EXIT, INTERP_EXECUTE_FINISH, INTERP_ENDFILE, INTERP_FILE_NOT_OPEN, INTERP_ERROR 
-        # always 0 so far
-        log.debug("interp errcode %d" % sta.interpreter_errcode)
-        log.debug("line in file %d" % sta.read_line)
-        time.sleep(1)
+            #1 to 6: INTERP_OK, INTERP_EXIT, INTERP_EXECUTE_FINISH, INTERP_ENDFILE, INTERP_FILE_NOT_OPEN, INTERP_ERROR 
+            # always 0 so far
+            log.debug("interp errcode %d" % sta.interpreter_errcode)
+            log.debug("line in file %d" % sta.read_line)
+
+        time.sleep(0.1)
         if sta.interp_state == linuxcnc.INTERP_IDLE:
             log.info("finished")
             break
@@ -213,6 +222,7 @@ while True:
 
     move_to_precharge()
     run_program(files[0])
+    program_count += 1
 
     os.remove(files[0])
     move_to_precharge()
