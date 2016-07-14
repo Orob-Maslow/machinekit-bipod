@@ -80,16 +80,26 @@ with open('/proc/uptime', 'r') as f:
 with open('/proc/loadavg', 'r') as f:
     load_avg = float(f.readline().split()[0])
     payload["load_avg"] = load_avg
-# temp
+# cpu temp
 with open('/sys/class/hwmon/hwmon0/device/temp1_input', 'r') as f:
     cpu_temp = float(f.readline().split()[0])
     payload["cpu_temp"] = cpu_temp
+
+# pcb temp
+from Adafruit_I2C import Adafruit_I2C
+i2c = Adafruit_I2C(0x48)
+b = i2c.readList(0, 2)
+#ignore negative for now
+pcb_temp = b[0] / 2
+if b[1]:
+    pcb_temp += 0.5
+payload["pcb_temp"] = pcb_temp
 
 # important processes
 process_cmds = [ 
     { 'name': 'bipod_pid', 'cmd' : ['pgrep', '-f', 'bipod.py' ] },
     { 'name': 'linuxcnc_pid', 'cmd': ['pgrep', '-f', 'linuxcnc bipod.ini'] },
-    { 'name': 'autossh_pid', 'cmd': ['pgrep', 'autossh'] }, ]
+    { 'name': 'autossh_pid', 'cmd': ['pgrep', '-f', 'autossh.*atbristol'] }, ]
 
 for process in process_cmds:
     p = Popen(process['cmd'], stdout=PIPE, stderr=PIPE)
