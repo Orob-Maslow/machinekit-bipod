@@ -39,7 +39,7 @@ h.newpin("rx-err", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("cksum-err", hal.HAL_U32, hal.HAL_OUT)
 
 # these for monitoring connection on gondola
-h.newpin("gond_batt", hal.HAL_U32, hal.HAL_OUT)
+h.newpin("gond_batt", hal.HAL_FLOAT, hal.HAL_OUT)
 h.newpin("gond_rx_count", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("gond_err_count", hal.HAL_U32, hal.HAL_OUT)
 #h.newpin("gond_flags", hal.HAL_U32, hal.HAL_OUT)
@@ -58,6 +58,13 @@ h.ready()
 log.debug("hal ready")
 
 packet_size = 8
+def calc_batt(batt_adc):
+    a_in = batt_adc * 3.3 / 1023
+    R2 = 4700.0  # should be 100k but adjusted for RAIN impedance
+    R1 = 10000.0
+    batt_level = a_in / (R1 / (R1+R2))
+    batt_level = round(batt_level, 2)
+    return batt_level
 
 def communicate(amount):
     bin = struct.pack('<B', amount)
@@ -70,7 +77,7 @@ def communicate(amount):
         bin = struct.pack('<HHHB', batt, rx_count, err_count, touch)
         # check cksum
         if cksum == crc8_func(bin):
-            h['gond_batt'] = batt
+            h['gond_batt'] = calc_batt(batt)
             h['gond_rx_count'] = rx_count
             h['gond_err_count'] = err_count
             h['gond_touch'] = touch
