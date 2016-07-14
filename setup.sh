@@ -51,12 +51,6 @@ done;
 #	exit 1;
 #fi
 
-sleep 2 # try this to stop the following from always breaking on first load
-
-if [ ! -r /sys/class/uio/uio0 ] ; then
-	echo PRU control files not found in /sys/class/uio/uio0 >&2
-	exit 1;
-fi
 
 # Export GPIO pins:
 # One pin needs to be exported to enable the low-level clocks for the GPIO
@@ -79,6 +73,7 @@ fi
 sudo $(which config-pin) -f - <<- EOF
 
     P9.11 in    # e stop
+    P9.12 in    # reset/user
     P9.24 uart  # serial
     P9.26 uart  # serial
     P9.15 out   # ystep
@@ -88,5 +83,12 @@ sudo $(which config-pin) -f - <<- EOF
     P9.14 out   # enable
     P9.21 in    # home x
     P9.22 in    # home y
+    P9.42 pwm   # 7 segment
 EOF
+
+
+if [ ! -r /sys/class/uio/uio0 ] ; then
+	echo PRU control files not found in /sys/class/uio/uio0 >&2
+	exit 1;
+fi
 
