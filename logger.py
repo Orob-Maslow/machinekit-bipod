@@ -33,6 +33,7 @@ pins = [
     { 'pin' : 'xbee.cksum-err', 'tag': 'xbee_cksumerr' },
     { 'pin' : 'xbee.rx-err', 'tag': 'xbee_rxerr' },
     { 'pin' : 'xbee.gond_touch', 'tag': 'pen_touch' },
+    { 'pin' : 'xbee.flags', 'tag': 'pen_flags' },
 
     ]
 
