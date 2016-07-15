@@ -5,6 +5,8 @@ import serial
 import struct
 import crcmod
 
+FMT = '<HHHBBB'
+
 # max servo angle
 MAX_VAL = 170
 
@@ -42,14 +44,14 @@ h.newpin("cksum-err", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("gond_batt", hal.HAL_FLOAT, hal.HAL_OUT)
 h.newpin("gond_rx_count", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("gond_err_count", hal.HAL_U32, hal.HAL_OUT)
-#h.newpin("gond_flags", hal.HAL_U32, hal.HAL_OUT)
+h.newpin("gond_flags", hal.HAL_U32, hal.HAL_OUT)
 h.newpin("gond_touch", hal.HAL_U32, hal.HAL_OUT)
 
 log.debug("scale = %d" % h['scale'])
 
 serial_port=serial.Serial()
 serial_port.port='/dev/ttyO1'
-serial_port.timeout=0.05
+serial_port.timeout=0.10
 serial_port.baudrate=57600
 serial_port.open()
 log.debug("port opened")
@@ -57,7 +59,6 @@ log.debug("port opened")
 h.ready()
 log.debug("hal ready")
 
-packet_size = 8
 def calc_batt(batt_adc):
     a_in = batt_adc * 3.3 / 1023
     R2 = 4700.0  # should be 100k but adjusted for RAIN impedance
@@ -71,16 +72,18 @@ def communicate(amount):
     bin = struct.pack('<BB',amount, crc8_func(bin))
     serial_port.write(bin)
 
+    packet_size = struct.calcsize(FMT)
     response = serial_port.read(packet_size)
     if len(response) == packet_size:
-        batt, rx_count, err_count, touch, cksum = struct.unpack('<HHHBB', response)
-        bin = struct.pack('<HHHB', batt, rx_count, err_count, touch)
+        batt, rx_count, err_count, touch, flags, cksum = struct.unpack(FMT, response)
+        bin = struct.pack('<HHHBB', batt, rx_count, err_count, touch, flags)
         # check cksum
         if cksum == crc8_func(bin):
             h['gond_batt'] = calc_batt(batt)
             h['gond_rx_count'] = rx_count
             h['gond_err_count'] = err_count
             h['gond_touch'] = touch
+            h['gond_flags'] = flags
         else:
             h['cksum-err'] += 1
     else:
