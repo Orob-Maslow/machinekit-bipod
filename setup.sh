@@ -74,6 +74,7 @@ sudo $(which config-pin) -f - <<- EOF
 
     P9.11 in    # e stop
     P9.12 in    # reset/user
+    P9.13 out   # gondola charge
     P9.24 uart  # serial
     P9.26 uart  # serial
     P9.15 out   # ystep
