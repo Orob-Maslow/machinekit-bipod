@@ -1,12 +1,23 @@
 #!/usr/bin/env python
 from subprocess import Popen, PIPE
-import utils
+import Adafruit_BBIO.GPIO as GPIO
 import os
 import glob
 import logging
 import linuxcnc
 import time
 import pickle
+
+# setup linuxcnc control/feedback channels
+com = linuxcnc.command()
+sta = linuxcnc.stat()
+err = linuxcnc.error_channel()
+
+class ShutdownException(Exception):
+    pass
+
+def shutdown(channel):
+    raise ShutdownException()
 
 # gondola flags
 GOND_FLAG_CHARGE = 1
@@ -15,6 +26,7 @@ GOND_FLAG_CHARGE = 1
 program_count = 0
 log_interval = 5 #seconds
 
+# setup logging
 log = logging.getLogger('')
 log.setLevel(logging.DEBUG)
 
@@ -29,7 +41,9 @@ fh = logging.FileHandler('bipod.log')
 fh.setFormatter(log_format)
 log.addHandler(fh)
 
-log.info("started")
+# setup button
+button_pin = "P9_12"
+GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 # this should come from .hal
 width = 2140 
@@ -115,7 +129,7 @@ def move_to_charge():
     turn_on_charger()
 
     # wait for charge connection
-    time.sleep(2)
+    time.sleep(4)
     # then check if it's charging
     gond_flags = Popen('halcmd getp xbee.gond_flags', shell=True, stdout=PIPE).stdout.read().strip()
     gond_flags = int(gond_flags)
@@ -191,10 +205,14 @@ def wait_till_done():
             log.info("finished")
             break
 
-# Usage examples for some of the commands listed below:
-com = linuxcnc.command()
-sta = linuxcnc.stat()
-err = linuxcnc.error_channel()
+        if GPIO.event_detected(button_pin):
+            raise ShutdownException()
+
+###########################################################################
+# wait for button
+log.info("started - waiting for button")
+GPIO.wait_for_edge(button_pin, GPIO.RISING)
+log.info("button pressed - starting")
 
 com.state(linuxcnc.STATE_ESTOP_RESET)
 com.wait_complete() 
@@ -237,9 +255,15 @@ move_to_charge()
 
 ###############################
 
+# add event handler to catch if it happens while something else is running
+GPIO.add_event_detect(button_pin, GPIO.RISING, callback=shutdown)
+
 dir = '/tmp/gcodes/*ngc'
 try:
     while True:
+        if GPIO.event_detected(button_pin):
+            raise ShutdownException()
+
         files = glob.glob(dir)
         if len(files) == 0:
             log.info("no files, sleeping")
@@ -259,6 +283,10 @@ except KeyboardInterrupt:
     log.info("interrupted!")
 except Exception as e:
     log.error("got exception: %s" % e)
+except ShutdownException:
+    log.warning("shutdown")
+    # do the shutdown
+    os.system("sudo halt")
 
 turn_off_charger()
 log.info("done")
