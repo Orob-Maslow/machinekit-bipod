@@ -97,7 +97,7 @@ def move_to_charge():
         log.info("docked and charging")
     else:
         log.warning("docked but not charging")
-        turn_off_charger()
+#        turn_off_charger() # leave it on
 
 
 def gondola_touched():
