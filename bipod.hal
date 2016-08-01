@@ -18,7 +18,7 @@ loadusr -W xbee.py 20
 # loadrt trivkins
 loadrt bipodkins
 
-setp bipodkins.Bx 2160 # 2200 wide - 40 for the pulleys
+setp bipodkins.Bx 2140 # 2200 wide - 60 for the pulleys
 
 # motion controller, get name and thread periods from ini file
 # trajectory planner
