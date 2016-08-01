@@ -50,8 +50,8 @@ width = 2140
 g54 = { 'x': 0, 'y': 0, 'z': 0 } # this is where the g54 0,0 point will be
 # what files to run to charge the gondola battery
 dir_path = os.path.dirname(os.path.realpath(__file__))
-charge_gcode = dir_path + 'charge.ngc'
-precharge_gcode = dir_path + 'precharge.ngc'
+charge_gcode = dir_path + '/charge.ngc'
+precharge_gcode = dir_path + '/precharge.ngc'
 
 def run_program(file):
     log.info("starting program %d: %s" % (program_count, file))
