@@ -48,29 +48,10 @@ GPIO.setup(button_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 # this should come from .hal
 width = 2140 
 g54 = { 'x': 0, 'y': 0, 'z': 0 } # this is where the g54 0,0 point will be
-precharge_pos = { 'x' : width/2, 'y' : 390, 'z': 8, 'f' : 7000 } # relative to g54
-charge_pos = { 'x' : width/2, 'y' : 300, 'z': 8, 'f' : 2000 } # relative to g54
-
-# lengthen strings if necessary
-"""
-def pre_home_jog():
-    log.info("pre home jog")
-    jog = 100 #mm
-    velocity = 100
-    com = linuxcnc.command()
-    sta = linuxcnc.stat()
-    home_x, home_y = 'TRUE', 'TRUE'
-    while home_x == 'TRUE' and home_y == 'TRUE':
-        # jog down a bit anyway in case on top of home switches
-        if home_x == 'TRUE':
-            com.jog(linuxcnc.JOG_INCREMENT, 0, velocity, jog)
-        if home_y == 'TRUE':
-            com.jog(linuxcnc.JOG_INCREMENT, 1, velocity, jog)
-        com.wait_complete() 
-        home_x = Popen('halcmd gets home-x', shell=True, stdout=PIPE).stdout.read().strip()
-        home_y = Popen('halcmd gets home-y', shell=True, stdout=PIPE).stdout.read().strip()
-        log.info("x: %s y: %s" % (home_x, home_y))
-"""
+# what files to run to charge the gondola battery
+dir_path = os.path.dirname(os.path.realpath(__file__))
+charge_gcode = dir_path + 'charge.ngc'
+precharge_gcode = dir_path + 'precharge.ngc'
 
 def run_program(file):
     log.info("starting program %d: %s" % (program_count, file))
@@ -86,7 +67,6 @@ def run_program(file):
     com.auto(linuxcnc.AUTO_RUN, 0) # second arg is start line
     wait_till_done()
 
-
 def turn_on_charger():
     log.info("turning on charger")
     os.system("config-pin p9.13 hi")
@@ -96,40 +76,20 @@ def turn_off_charger():
     os.system("config-pin p9.13 lo")
 
 def move_to_precharge():
-    log.info("moving to precharge")
-
+    log.info("moving to precharge position")
     turn_off_charger()
-
-    log.debug("changing to auto mode")
-    com.mode(linuxcnc.MODE_MDI)
-    com.wait_complete() # wait until mode switch executed
-    sta.poll()
-    if sta.task_mode == linuxcnc.MODE_MDI:
-        log.debug("success")
-
-    log.info("sending gcode x%d y%d" % (precharge_pos['x'], precharge_pos['y']))
-    com.mdi("g1 x%d y%d f%d" % (precharge_pos['x'], precharge_pos['y'], precharge_pos['f']))
-
-    wait_till_done()
+    run_program(precharge_gcode)
 
 def move_to_charge():
-    log.info("moving back to charging position")
-    log.debug("changing to auto mode")
-    com.mode(linuxcnc.MODE_MDI)
-    com.wait_complete() # wait until mode switch executed
-    sta.poll()
-    if sta.task_mode == linuxcnc.MODE_MDI:
-        log.debug("success")
-
-    log.info("sending gcode x%d y%d" % (charge_pos['x'], charge_pos['y']))
-    com.mdi("g1 x%d y%d f%d" % (charge_pos['x'], charge_pos['y'], charge_pos['f']))
-    wait_till_done()
+    log.info("moving to charging position")
+    run_program(charge_gcode)
 
     # turn on power
     turn_on_charger()
 
     # wait for charge connection
     time.sleep(4)
+
     # then check if it's charging
     gond_flags = Popen('halcmd getp xbee.gond_flags', shell=True, stdout=PIPE).stdout.read().strip()
     gond_flags = int(gond_flags)
