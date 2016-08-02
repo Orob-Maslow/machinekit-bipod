@@ -24,11 +24,11 @@ def fetch_data():
         try:
             r = requests.get(url)
             if r.status_code == 200:
-                gcode_file = "%s/%d.ngc" % (args.ngc_dir, time.time())
+                gcode_file = "%s/%d.%d.ngc" % (args.ngc_dir, count, time.time())
                 with open(gcode_file, 'w') as fh:
                     fh.write(r.text)
                 if args.verbose:
-                    print "%d: got gcodes from server" % (count)
+                    print "[%d] writing to %s" % (count, gcode_file)
             elif r.status_code == 204:
                 #end of the gcodes
                 return
