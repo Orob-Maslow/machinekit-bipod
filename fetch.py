@@ -11,6 +11,23 @@ import requests
 
 ngc_dir = "/tmp/gcodes"
 
+def update_robot_status():
+    response = "updated"
+
+    payload = {
+        'status': response,
+        }
+
+    url = args.url + '/api/v1/endpoint/' + str(args.robot_id) + "/"
+    headers = {'content-type': 'application/json'}
+    r = requests.patch(url, data=json.dumps(payload),headers=headers)
+    print r.status_code
+    if r.status_code == 202:
+        print "updated ok")
+    else:
+        print "failed to update"
+    return response
+
 def fetch_data():
     url = args.url + '/endpoint_data/' + str(args.robot_id)
     if not args.no_consume:
@@ -57,7 +74,7 @@ if __name__ == '__main__':
         action='store_const', const=True, dest='verbose', default=True,
         help="verbose")
     parser.add_argument('--send-status',
-        action='store_const', const=True, dest='sendstatus', default=False,
+        action='store_const', const=True, dest='sendstatus', default=True,
         help="send current status of the robot to the server")
     parser.add_argument('--robot-id',
         action='store', dest='robot_id', type=int, default=None, required=True,
