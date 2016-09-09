@@ -9,6 +9,7 @@ import time
 import pickle
 
 # setup linuxcnc control/feedback channels
+# http://linuxcnc.org/docs/2.6/html/common/python-interface.html for more details
 com = linuxcnc.command()
 sta = linuxcnc.stat()
 err = linuxcnc.error_channel()
@@ -21,6 +22,7 @@ dir = '/tmp/gcodes/*ngc'
 
 # gondola flags
 GOND_FLAG_CHARGE = 1
+GOND_FLAG_SERVO_ENABLE = 2
 
 # count how many programs have been run
 program_count = 0

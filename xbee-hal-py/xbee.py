@@ -1,4 +1,5 @@
 #!/usr/bin/python
+# http://linuxcnc.org/docs/2.6/html/common/python-interface.html for more details
 import hal, time
 import logging
 import serial
@@ -6,6 +7,10 @@ import struct
 import crcmod
 
 FMT = '<HHHBBB'
+
+# gondola flags
+GOND_FLAG_CHARGE = 1
+GOND_FLAG_SERVO_ENABLE = 2
 
 # max servo angle
 MAX_VAL = 170
@@ -35,6 +40,8 @@ h.newpin("pos", hal.HAL_FLOAT, hal.HAL_IN)
 h['pos'] = 8 # default pen is up
 h.newparam("scale", hal.HAL_FLOAT, hal.HAL_RW)
 h['scale'] = 20 # default
+h.newparam("servo_enable", hal.HAL_BIT, hal.HAL_IN)
+h['servo_enable'] = 1
 
 # these for monitoring connection on bbb
 h.newpin("rx-err", hal.HAL_U32, hal.HAL_OUT)
@@ -67,9 +74,9 @@ def calc_batt(batt_adc):
     batt_level = round(batt_level, 2)
     return batt_level
 
-def communicate(amount):
-    bin = struct.pack('<B', amount)
-    bin = struct.pack('<BB',amount, crc8_func(bin))
+def communicate(amount, flags):
+    bin = struct.pack('<BB', amount, flags)
+    bin = struct.pack('<BBB',amount, flags, crc8_func(bin))
     serial_port.write(bin)
 
     packet_size = struct.calcsize(FMT)
@@ -92,12 +99,13 @@ def communicate(amount):
 try:
     while 1:
         time.sleep(0.05)
+        flags = h['servo_enable'] * GOND_FLAG_SERVO_ENABLE
         val = h['pos'] * h['scale']
         if val > MAX_VAL:
             val = MAX_VAL
         if val < 0:
             val = 0
-        communicate(val)
+        communicate(val, flags)
 except KeyboardInterrupt:
     raise SystemExit
     log.error("keyboard interrupt")
