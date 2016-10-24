@@ -16,7 +16,7 @@ GOND_FLAG_SERVO_ENABLE = 2
 
 serial_port=serial.Serial()
 serial_port.port='/dev/ttyO1'
-serial_port.timeout=0.01
+serial_port.timeout=0.05
 serial_port.baudrate=57600
 serial_port.open()
 logging.info("port opened")
@@ -57,6 +57,8 @@ try:
         communicate(114)
         communicate(115)
         """
+    flags = 0 # GOND_FLAG_SERVO_ENABLE
+    communicate(160, flags)
 
 except KeyboardInterrupt:
     raise SystemExit
