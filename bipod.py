@@ -138,24 +138,27 @@ def logger():
         8  EXEC_WAITING_FOR_SYSTEM_CMD
 
         2, 3 (not much), 5 or 7 (lots)
+
+        interp state
+        1 to 4: INTERP_IDLE, INTERP_READING, INTERP_PAUSED, INTERP_WAITING
+        mostly 1, 2 or 4
+
+        state
+        RCS_DONE, RCS_EXEC, RCS_ERROR.
+        1, 2 (mostly) or 3 - worth investigating state 3
+
+        inter errcode
+        1 to 6: INTERP_OK, INTERP_EXIT, INTERP_EXECUTE_FINISH, INTERP_ENDFILE, INTERP_FILE_NOT_OPEN, INTERP_ERROR 
+        always 0 so far
         """
         if time.time() - last_log > log_interval:
             last_log = time.time()
-            log.debug("exec state %d" % sta.exec_state)
-
-            #1 to 4: INTERP_IDLE, INTERP_READING, INTERP_PAUSED, INTERP_WAITING
-            # 1, 2 or 4
-            log.debug("interp state %d" % sta.interp_state)
-
-            # RCS_DONE, RCS_EXEC, RCS_ERROR.
-            # 1, 2 (mostly) or 3 - worth investigating state 3
-            log.debug("state %d" % sta.state)
-
-            #1 to 6: INTERP_OK, INTERP_EXIT, INTERP_EXECUTE_FINISH, INTERP_ENDFILE, INTERP_FILE_NOT_OPEN, INTERP_ERROR 
-            # always 0 so far
-            log.debug("interp errcode %d" % sta.interpreter_errcode)
-            log.debug("line in file %d" % sta.motion_line)
-
+            log.debug("exec state %d, interp state %d, state %d, errcode %d, line in file %d" % (
+                    sta.exec_state,
+                    sta.interp_state,
+                    sta.state,
+                    sta.interpreter_errcode,
+                    sta.motion_line))
 
 # run in a thread
 class CmdRequestHandler(SocketServer.BaseRequestHandler):
