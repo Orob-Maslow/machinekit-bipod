@@ -34,7 +34,7 @@ GOND_FLAG_CHARGE = 1
 
 # count how many programs have been run
 program_count = 0
-log_interval = 5 #seconds
+log_interval = 10 #seconds
 
 # setup logging
 log = logging.getLogger('')
@@ -162,13 +162,17 @@ class CmdRequestHandler(SocketServer.BaseRequestHandler):
 
     def handle(self):
         # put msg in receive queue
-        q_recv.put(self.request.recv(1024))
-        # wait for something to send back
-        while q_send.empty():
-            time.sleep(1)
-        # send it
+        cmd = self.request.recv(1024)
+        log.debug("got cmd [%s]" % cmd)
+        q_recv.put(cmd)
+
+        # wait for a second for any reply we're going to send, main thread might be busy
+        time.sleep(1)
+
+        # if there is stuff to send back, send it
         while not q_send.empty():
             reply = q_send.get()
+            log.debug("sending reply [%s]" % reply)
             self.request.send(reply)
         return
 
@@ -181,6 +185,7 @@ def check_cmd_message():
 ###########################################################################
 # start of main
 
+log.info("starting command server listening on [%s:%d]" % (HOST, PORT))
 SocketServer.TCPServer.allow_reuse_address = True
 server = SocketServer.TCPServer((HOST, PORT), CmdRequestHandler)
 
@@ -193,6 +198,7 @@ logger_thread.setDaemon(True)
 logger_thread.start()
 
 # wait for signal to start
+log.info("waiting for start command")
 while True:
     if check_cmd_message() == 'start':
         q_send.put("start")
@@ -206,15 +212,18 @@ com.state(linuxcnc.STATE_ON)
 com.wait_complete()
 
 # home all
-log.info("homing all")
+log.info("homing all..")
 com.home(0)
 com.home(1)
 com.home(2)
 
 while not sta.homed[0:3] == (1,1,1):
-    log.debug("homing...")
     sta.poll()
-    time.sleep(1)
+    time.sleep(0.1)
+    if check_cmd_message() == 'quit':
+        log.warning("quitting")
+        q_send.put("quit")
+        exit(1)
 
 # switch to world mode
 log.info("teleop mode")
@@ -223,8 +232,8 @@ com.wait_complete()
 set_g54()
 
 # move to charge pos
-
 move_to_precharge()
+
 move_to_charge()
 
 # wait for files to appear
@@ -232,16 +241,21 @@ running = True
 try:
     while running:
         msg = check_cmd_message()
+        # here we can request program count, quit or shutdown
         if msg == 'programs':
-            q_send.put(program_count)
-        if msg == 'quit':
+            q_send.put(str(program_count))
+        elif msg == 'quit':
             q_send.put("quit")
             running = False
+        elif msg == 'halt':
+            q_send.put("halt")
+            raise ShutdownException()
 
         files = glob.glob(dir)
         if len(files) == 0:
-            log.info("no files, sleeping")
-            time.sleep(10)
+            if int(time.time()) % 10 == 0:
+                log.info("no files, sleeping")
+            time.sleep(1)
             continue
 
         set_g54() # in case the program changed it
@@ -252,11 +266,15 @@ try:
             if sta.interp_state == linuxcnc.INTERP_IDLE:
                 log.info("finished")
                 break
-            time.sleep(1)
+            time.sleep(0.1)
+            # here we can skip the program or halt
             msg = check_cmd_message()
             if msg == 'skip':
                 q_send.put("skip")
                 break
+            elif msg == 'halt':
+                q_send.put("halt")
+                raise ShutdownException()
 
         program_count += 1
 
