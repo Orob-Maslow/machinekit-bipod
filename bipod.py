@@ -66,6 +66,14 @@ precharge_gcode = dir_path + '/precharge.ngc'
 #################################################
 # start of functions
 
+def wait_till_done():
+    while True:
+        sta.poll()
+        time.sleep(1)
+        if sta.interp_state == linuxcnc.INTERP_IDLE:
+            log.info("finished")
+            break
+
 def run_program(file):
     log.info("starting program %d: %s" % (program_count, file))
     log.debug("changing to auto mode")
@@ -78,6 +86,7 @@ def run_program(file):
 
     com.program_open(file)
     com.auto(linuxcnc.AUTO_RUN, 0) # second arg is start line
+    wait_till_done()
 
 def turn_on_servo():
     log.info("turning on servo")
