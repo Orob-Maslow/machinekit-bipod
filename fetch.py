@@ -23,7 +23,7 @@ def update_robot_status():
     r = requests.patch(url, data=json.dumps(payload),headers=headers)
     print r.status_code
     if r.status_code == 202:
-        print "updated ok")
+        print "updated ok"
     else:
         print "failed to update"
     return response
@@ -52,8 +52,10 @@ def fetch_data():
             elif r.status_code == 404:
                 print("server has a problem with the gcodes")
                 print("try refreshing URL by hand to clear bad gcode files")
+                return
             else:
                 print "unexpected server response ", r.status_code 
+                return
 
         except requests.exceptions.ConnectionError, e:
             print >>sys.stderr, e
