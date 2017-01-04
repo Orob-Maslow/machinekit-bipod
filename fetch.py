@@ -8,6 +8,7 @@ import time
 import datetime
 import argparse
 import requests
+import fcntl
 
 ngc_dir = "/tmp/gcodes"
 
@@ -83,6 +84,17 @@ if __name__ == '__main__':
         help="override robot id")
 
     args = parser.parse_args()
+
+    #locking
+    file = "/tmp/feed.lock"
+    fd = open(file,'w')
+    try:
+        print "check lock"
+        fcntl.lockf(fd,fcntl.LOCK_EX | fcntl.LOCK_NB)
+        print "ok"
+    except IOError:
+        print "another process is running with lock. quitting!", file
+        exit(1)
 
     print "started ", datetime.datetime.now()
     gcodes = []
