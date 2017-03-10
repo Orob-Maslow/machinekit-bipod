@@ -60,6 +60,10 @@ def fetch_data():
 
         except requests.exceptions.ConnectionError, e:
             print >>sys.stderr, e
+        
+        if args.max_gcodes is not None:
+            if count == args.max_gcodes:
+                break
 
 
 if __name__ == '__main__':
@@ -82,6 +86,9 @@ if __name__ == '__main__':
     parser.add_argument('--robot-id',
         action='store', dest='robot_id', type=int, default=None, required=True,
         help="override robot id")
+    parser.add_argument('--max',
+        action='store', dest='max_gcodes', type=int, default=None,
+        help="max number of files to fetch")
 
     args = parser.parse_args()
 
