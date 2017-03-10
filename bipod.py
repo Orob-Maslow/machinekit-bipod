@@ -185,6 +185,8 @@ def logger():
                     sta.interpreter_errcode,
                     sta.motion_line))
 
+        time.sleep(0.1)
+
 # run in a thread
 class CmdRequestHandler(SocketServer.BaseRequestHandler):
 
