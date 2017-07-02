@@ -272,6 +272,11 @@ try:
     com.wait_complete()
     set_g54()
 
+    # to do homing, uncomment these lines
+    # while True:
+    #     log.info("waiting")
+    #    time.sleep(1)
+
     # move to charge pos
     move_to_precharge()
 
